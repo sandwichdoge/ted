@@ -96,21 +96,21 @@ int main(int argc, char *argv[])
                 cur_lineno = DECREMENT(cur_lineno);
                 break;
             case KEY_LEFT:
-                if (pos[1] == 0) {
-                    move(pos[0] - 1, HLINES > 0 ? HLINES - 1 : HLINES);
+                if (pos[1] == 0) { //Left key pressed at start of line
+                    move(cur_lineno > 0 ? pos[0] - 1 : pos[0], cur_lineno > 0 ? HLINES - 1 : pos[1]); //Do nothing if it's 1st line of doc
                     cur_lineno = DECREMENT(cur_lineno);
                 }
                 else {
                     move(pos[0], pos[1] - 1);
                 }
                 break;
-            case KEY_RIGHT:
+            case KEY_RIGHT: //Right key pressed at end of line
                 if (pos[1] == HLINES - 1) {
                     move(pos[0] + 1, 0);
+                    cur_lineno = INCREMENT(cur_lineno, new_sz);
                 }
                 else {
                     move(pos[0], pos[1] + 1);
-                    cur_lineno++;
                 }
                 break;
             case KEY_END:
