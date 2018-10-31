@@ -3,14 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include "fileops.h" //file_read_to_array()
+#include "linked-list.h"
 
 #define HLINES 80
 #define VLINES 24
 #define LF_FLAG HLINES + 1
 
+typedef node_t line_t;
+
+
 char** generate_terminal_friendly_array(char **arr, int sz, int *new_size, int max_len);
-
-
+int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_size, int max_len);
+int list_write_to_file(line_t *head, char *path, int flg_pos);
 
 int main()
 {
@@ -18,19 +22,16 @@ int main()
 
     int line_count = 0;
     char **lines = file_read_to_array(file, &line_count);
-    
-    int new_sz = 0;
-    char **balanced_lines = generate_terminal_friendly_array(lines, line_count, &new_sz, HLINES);
-    
-    printf("%d\n", new_sz);
 
-    for (int i = 0; i < new_sz; i++) {
-        printf("%d.%s[%d]\n", i, balanced_lines[i], balanced_lines[i][LF_FLAG]);
-    }
+    line_t head; head.prev = NULL; head.next = NULL; //Initialize head node
 
+    int new_sz;
+    generate_terminal_friendly_list(lines, line_count, &head, &new_sz, HLINES);
+    line_t *first_line = head.next; /*advance and discard head since it's garbage*/
+    //print_list(first_line);
+    list_write_to_file(first_line, "sample2.txt", HLINES + 1);
 
     free_str_array(lines, line_count);
-    free_str_array(balanced_lines, new_sz);
 
     return 0;
 }
@@ -43,7 +44,7 @@ int main()
  *Function returns pointer to new array and the size of it via new_sz
  *Caller is responsible for freeing returned data
  */
-char** generate_terminal_friendly_array(char **arr, int sz, int *new_sz, int max_len)
+int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_sz, int max_len)
 {
     char **ret = malloc(1);
     int len;
@@ -56,8 +57,8 @@ char** generate_terminal_friendly_array(char **arr, int sz, int *new_sz, int max
         cur = 0;
         while (len >= 0) {
             /*Expand the new array*/
-            ret = realloc(ret, ((*new_sz)+1) * sizeof(char*));
-            ret[*new_sz] = (char*)calloc(max_len + 2, 1); //+2 for NULLTERM and trailing LF flag
+            char *str = calloc(max_len + 2, 1);
+            head = list_add_next(head, str);
 
             /*Give it a nice linebreak formatting (avoid breaking a word in half)*/
             if ((arr[i] + cur)[max_len - 1] != '\0') { //if line is too long
@@ -69,34 +70,54 @@ char** generate_terminal_friendly_array(char **arr, int sz, int *new_sz, int max
             }
             
             /*Put the divided line to new array position*/
-            strncpy(ret[*new_sz], arr[i] + cur, formatted_len);
+            strncpy(str, arr[i] + cur, formatted_len);
 
             /*Advance current position*/
             cur += formatted_len;
             len -= formatted_len;
             (*new_sz) += 1;
         }
-        ret[(*new_sz)-1][max_len+1] = 1; //real LF (\n)
+
+        head->str[max_len+1] = 1;
 
     }
 
-    return ret;
+    return 0;
 }
+
 
 
 /*This is a customized version
  *It will check the flg of line to see if the linebreak is real or was generated for viewing
  *flg_pos is always the last element of line, right after NULL TERM
  */
-int array_write_to_file(const char *path, char **arr, int lines, int flg_pos)
+int list_write_to_file(line_t *head, char *path, int flg_pos)
 {
     FILE *fd = fopen(path, "w");
     if (fd == NULL) return -1;
 
-    char *buf = malloc(flg_pos);
+    char *buf = calloc(flg_pos, 1);
+    int lineno = 0;
+    int len;
 
-    for (int i = 0; i < lines; i++) {
-        
+    /*print a line, then print LF*/
+    while (head) {
+        lineno++;
+        strncpy(buf, head->str, flg_pos-1);
+        len = strlen(buf);
+
+        /*only write LF for lines with real LF*/
+        if (head->str[flg_pos] == 1) {
+            buf[len] = '\n';
+            len++;
+        }
+
+        fwrite(buf, len, 1, fd);
+        head = head->next;
     }
 
+    free(buf);
+    fclose(fd);
+    
+    return 0;
 }
