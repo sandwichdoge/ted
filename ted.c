@@ -19,6 +19,7 @@ void scr_clear();
 line_t* scr_out(line_t *head, int how_many);
 int print_line(char *data, int L);
 void update_pos(int pos[]);
+line_t* list_rewind(line_t *head, int how_many);
 
 
 int main()
@@ -39,14 +40,14 @@ int main()
     int new_sz;
     generate_terminal_friendly_list(lines, line_count, &head, &new_sz, HLINES);
     line_t *first_line = head.next; /*Advance and discard head because it's garbage*/
-    
-    /*Print first page of document to screen*/
-    line_t *cur_line; //Next unprinted line in list
-    int pos[2] = {0, 0};
+    first_line->prev = NULL;
 
-    
-    scr_clear();
-    cur_line = scr_out(first_line, VLINES+1);
+    /*These variables must be kept track of all times*/
+    line_t *cur_line; //Next unprinted line in list
+    int pos[2] = {0, 0}; //Current pos of cursor
+
+    /*Print first page of document to screen*/
+    cur_line = scr_out(first_line, VLINES);
     move(0, 0);
     refresh();
 
@@ -58,16 +59,39 @@ int main()
         if (k == KEY_F(2)) break;
         switch (k) {
             case KEY_DOWN:
-                move(pos[0] + 1, pos[1]);
+                if (pos[0] == VLINES - 1) {
+                    cur_line = scr_out(cur_line, VLINES);
+                    move(0, pos[1]);
+                }
+                else {
+                    move(pos[0] + 1, pos[1]);
+                }
                 break;
             case KEY_UP:
-                move(pos[0] - 1, pos[1]);
+                if (pos[0] == 0) {
+                    cur_line = list_rewind(cur_line, VLINES * 2);
+                    cur_line = scr_out(cur_line, VLINES);
+                    move(VLINES - 1, pos[1]);
+                }
+                else {
+                    move(pos[0] - 1, pos[1]);
+                }
                 break;
             case KEY_LEFT:
-                move(pos[0], pos[1] - 1);
+                if (pos[1] == 0) {
+                    move(pos[0] - 1, HLINES - 1);
+                }
+                else {
+                    move(pos[0], pos[1] - 1);
+                }
                 break;
             case KEY_RIGHT:
-                move(pos[0], pos[1] + 1);
+                if (pos[1] == HLINES - 1) {
+                    move(pos[0] + 1, 0);
+                }
+                else {
+                    move(pos[0], pos[1] + 1);
+                }
                 break;
         }
     }
@@ -180,9 +204,11 @@ void scr_clear()
 /*Print a specific number of lines to the screen, starting from head*/
 line_t* scr_out(line_t *head, int how_many)
 {
+    scr_clear();
     int l = 0; //line no
-    while (head != NULL && l < how_many) {
+    while (l < how_many) {
         print_line(head->str, l);
+        if (head->next == NULL) break;
         head = head->next;
         l++;
     }
@@ -205,4 +231,14 @@ void update_pos(int pos[])
 {
     pos[0] = getcury(stdscr);
     pos[1] = getcurx(stdscr);
+}
+
+
+line_t *list_rewind(line_t *head, int how_many)
+{
+    while (how_many-- && head->prev != NULL) {
+        head = head->prev;
+    }
+
+    return head;
 }
