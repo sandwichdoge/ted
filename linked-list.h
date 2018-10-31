@@ -90,6 +90,25 @@ node_t *list_add_back(node_t *head, char *str)
 }
 
 
+/*Traverse a list n times.
+direction: 0=backwards, 1=forward*/
+node_t *list_traverse(node_t *head, int direction, int n)
+{
+    if (direction == 0) { //Traverse backwards
+        while (n-- && head->prev != NULL) {
+            head = head->prev;
+        }
+    }
+    else { //Traverse foward
+        while (n-- && head->next != NULL) {
+            head = head->next;
+        }
+    }
+    
+    return head;
+}
+
+
 void print_list(node_t *head)
 {
     while (head != NULL) {

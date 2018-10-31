@@ -8,6 +8,8 @@
 #define HLINES 80
 #define VLINES 24
 #define LF_FLAG HLINES + 1
+#define DECREMENT(x) (x - 1 < 0 ? 0 : x - 1)
+#define INCREMENT(x, max) (x > max ? max : x + 1) //increment value with max threshold
 
 typedef node_t line_t;
 
@@ -28,11 +30,10 @@ int main(int argc, char *argv[])
     if (argc < 2) return -1;
     char *file = argv[1];
 
-
     int line_count = 0;
     char **lines = file_read_to_array(file, &line_count);
     if (lines == NULL) {
-        printf("Cannot open file.\n");
+        printf("Cannot open file %s.\n", file);
         return -1;
     }
 
@@ -44,11 +45,13 @@ int main(int argc, char *argv[])
     line_t *first_line = head.next; /*Advance and discard head because it's garbage*/
     first_line->prev = NULL;
 
-    /*These variables must be kept track of all times*/
+    /*These variables must be kept track of at all times*/
     line_t *next_page; //Next unprinted line in list
-    line_t *cur_page = first_line;
+    line_t *cur_page = first_line; //First line shown on the screen
     int pos[2] = {0, 0}; //Current pos of cursor
-    
+    line_t *cur_line = first_line;
+    int cur_lineno = 0;
+
     /*Initialize screen mode*/
     initscr();
     noecho();
@@ -65,17 +68,21 @@ int main(int argc, char *argv[])
         int k = getch();
         update_pos(pos);
 
+        /*FUNCTION KEYS*/
         if (k == KEY_F(2)) break;
+
         switch (k) {
+            /*NAVIGATION KEYS*/
             case KEY_DOWN:
                 if (pos[0] == VLINES - 1) {
                     cur_page = next_page;
                     next_page = scr_out(next_page, VLINES);
                     move(0, pos[1]);
                 }
-                else {
+                else if (cur_lineno < new_sz) {
                     move(pos[0] + 1, pos[1]);
                 }
+                cur_lineno = INCREMENT(cur_lineno, new_sz);
                 break;
             case KEY_UP:
                 if (pos[0] == 0 && cur_page != first_line) {
@@ -86,10 +93,12 @@ int main(int argc, char *argv[])
                 else {
                     move(pos[0] - 1, pos[1]);
                 }
+                cur_lineno = DECREMENT(cur_lineno);
                 break;
             case KEY_LEFT:
                 if (pos[1] == 0) {
                     move(pos[0] - 1, HLINES > 0 ? HLINES - 1 : HLINES);
+                    cur_lineno = DECREMENT(cur_lineno);
                 }
                 else {
                     move(pos[0], pos[1] - 1);
@@ -101,6 +110,7 @@ int main(int argc, char *argv[])
                 }
                 else {
                     move(pos[0], pos[1] + 1);
+                    cur_lineno++;
                 }
                 break;
             case KEY_END:
@@ -110,9 +120,20 @@ int main(int argc, char *argv[])
                 move(pos[0], 0);
                 break;
         }
-    }
 
-    //list_write_to_file(first_line, "sample2.txt", HLINES + 1);
+        /*INPUT KEYS (a-z, A-Z, 0-9, etc.)*/
+        /*Insert a char at cursor position, pos[0] is the line no and pos[1] is the char no.*/
+        /*Only supports ASCII characters for now*/
+        if (k >= 'a' && k <= 'z') {
+            cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+            /*Insert string into cur_line*/
+            
+
+            /*Display new line on screen*/
+
+        }
+
+    }
 
     free_str_array(lines, line_count);
     endwin();
