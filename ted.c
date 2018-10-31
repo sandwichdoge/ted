@@ -44,8 +44,9 @@ int main()
     line_t *cur_line; //Next unprinted line in list
     int pos[2] = {0, 0};
 
+    
     scr_clear();
-    cur_line = scr_out(first_line, VLINES);
+    cur_line = scr_out(first_line, VLINES+1);
     move(0, 0);
     refresh();
 
@@ -58,8 +59,20 @@ int main()
         switch (k) {
             case KEY_DOWN:
                 move(pos[0] + 1, pos[1]);
+                break;
+            case KEY_UP:
+                move(pos[0] - 1, pos[1]);
+                break;
+            case KEY_LEFT:
+                move(pos[0], pos[1] - 1);
+                break;
+            case KEY_RIGHT:
+                move(pos[0], pos[1] + 1);
+                break;
         }
     }
+
+    //list_write_to_file(first_line, "sample2.txt", HLINES + 1);
 
     free_str_array(lines, line_count);
     endwin();
@@ -91,6 +104,7 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
             char *str = calloc(max_len + 2, 1);
             head = list_add_next(head, str);
 
+            //TODO: fix fake lines
             /*Give it a nice linebreak formatting (avoid breaking a word in half)*/
             if ((arr[i] + cur)[max_len - 1] != '\0') { //if line is too long
                 for (formatted_len = max_len; formatted_len > 0; formatted_len--) {
@@ -107,6 +121,7 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
             cur += formatted_len;
             len -= formatted_len;
             (*new_sz) += 1;
+            if (len == 0) break;
         }
 
         head->str[max_len+1] = 1; //Natural end of line
@@ -116,7 +131,6 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
 
     return 0;
 }
-
 
 
 /*This is a customized version
