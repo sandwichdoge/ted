@@ -2,16 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "fileops.h" //file_read_to_array()
-#include "linked-list.h"
-
-#define HLINES 80
-#define VLINES 24
-#define LF_FLAG HLINES + 1
-#define DECREMENT(x) (x - 1 < 0 ? 0 : x - 1)
-#define INCREMENT(x, max) (x > max ? max : x + 1) //increment value with max threshold
-
-typedef node_t line_t;
+#include "ted.h"
 
 
 char** generate_terminal_friendly_array(char **arr, int sz, int *new_size, int max_len);
@@ -22,6 +13,7 @@ line_t* scr_out(line_t *head, int how_many);
 int print_line(char *data, int L);
 void update_pos(int pos[]);
 line_t* list_rewind(line_t *head, int how_many);
+int is_alpha(int c);
 
 
 int main(int argc, char *argv[])
@@ -124,12 +116,18 @@ int main(int argc, char *argv[])
         /*INPUT KEYS (a-z, A-Z, 0-9, etc.)*/
         /*Insert a char at cursor position, pos[0] is the line no and pos[1] is the char no.*/
         /*Only supports ASCII characters for now*/
-        if (k >= 'a' && k <= 'z') {
+        if (is_alpha(k)) {
             cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
             /*Insert string into cur_line*/
-            
-
-            /*Display new line on screen*/
+            if (strlen(cur_line->str) < HLINES) { //If current line's length hasnt reached limit, insert typed key
+                char_insert(cur_line->str, pos[1], k);
+                print_line(cur_line->str, pos[0]); //Display modified line on screen
+                move(pos[0], pos[1]+1);
+            }
+            else { //If line has reach len limit
+                //Append last char of current line to the front of next line, remove that char from cur line, insert char at cursor pos
+                //This should be a loop, to account for the following lines in case they're at max len as well
+            }
 
         }
 
@@ -195,42 +193,6 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
 }
 
 
-/*This is a customized version
- *It will check the flg of line to see if the linebreak is real or was generated for viewing
- *flg_pos is always the last element of line, right after NULL TERM
- */
-int list_write_to_file(line_t *head, char *path, int flg_pos)
-{
-    FILE *fd = fopen(path, "w");
-    if (fd == NULL) return -1;
-
-    char *buf = calloc(flg_pos, 1);
-    int lineno = 0;
-    int len;
-
-    /*print a line, then print LF*/
-    while (head) {
-        lineno++;
-        strncpy(buf, head->str, flg_pos-1);
-        len = strlen(buf);
-
-        /*only write LF for lines with real LF*/
-        if (head->str[flg_pos] == 1) {
-            buf[len] = '\n';
-            len++;
-        }
-
-        fwrite(buf, len, 1, fd);
-        head = head->next;
-    }
-
-    free(buf);
-    fclose(fd);
-    
-    return 0;
-}
-
-
 /*Clear the screen*/
 void scr_clear()
 {
@@ -279,4 +241,11 @@ line_t *list_rewind(line_t *head, int how_many)
     }
 
     return head;
+}
+
+
+/*Return 1 if c is alphabet*/
+int is_alpha(int c)
+{
+    return (c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z');
 }
