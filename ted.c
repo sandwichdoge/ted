@@ -45,7 +45,8 @@ int main(int argc, char *argv[])
     first_line->prev = NULL;
 
     /*These variables must be kept track of all times*/
-    line_t *cur_line; //Next unprinted line in list
+    line_t *next_page; //Next unprinted line in list
+    line_t *cur_page = first_line;
     int pos[2] = {0, 0}; //Current pos of cursor
     
     /*Initialize screen mode*/
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
     raw();
 
     /*Print first page of document to screen*/
-    cur_line = scr_out(first_line, VLINES);
+    next_page = scr_out(first_line, VLINES);
     move(0, 0);
     refresh();
 
@@ -68,7 +69,8 @@ int main(int argc, char *argv[])
         switch (k) {
             case KEY_DOWN:
                 if (pos[0] == VLINES - 1) {
-                    cur_line = scr_out(cur_line, VLINES);
+                    cur_page = next_page;
+                    next_page = scr_out(next_page, VLINES);
                     move(0, pos[1]);
                 }
                 else {
@@ -76,9 +78,9 @@ int main(int argc, char *argv[])
                 }
                 break;
             case KEY_UP:
-                if (pos[0] == 0) {
-                    cur_line = list_rewind(cur_line, VLINES * 2);
-                    cur_line = scr_out(cur_line, VLINES);
+                if (pos[0] == 0 && cur_page != first_line) {
+                    cur_page = list_rewind(cur_page, VLINES);
+                    next_page = scr_out(cur_page, VLINES);
                     move(VLINES - 1, pos[1]);
                 }
                 else {
@@ -87,7 +89,7 @@ int main(int argc, char *argv[])
                 break;
             case KEY_LEFT:
                 if (pos[1] == 0) {
-                    move(pos[0] - 1, HLINES - 1);
+                    move(pos[0] - 1, HLINES > 0 ? HLINES - 1 : HLINES);
                 }
                 else {
                     move(pos[0], pos[1] - 1);
@@ -100,6 +102,12 @@ int main(int argc, char *argv[])
                 else {
                     move(pos[0], pos[1] + 1);
                 }
+                break;
+            case KEY_END:
+                move(pos[0], HLINES - 1);
+                break;
+            case KEY_HOME:
+                move(pos[0], 0);
                 break;
         }
     }
