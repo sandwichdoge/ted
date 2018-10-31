@@ -22,18 +22,20 @@ void update_pos(int pos[]);
 line_t* list_rewind(line_t *head, int how_many);
 
 
-int main()
+int main(int argc, char *argv[])
 {
-     /*Initialize screen mode*/
-    initscr();
-    noecho();
-    keypad(stdscr, 1);
-    raw();
 
-    char *file = "sample.txt";
+    if (argc < 2) return -1;
+    char *file = argv[1];
+
 
     int line_count = 0;
     char **lines = file_read_to_array(file, &line_count);
+    if (lines == NULL) {
+        printf("Cannot open file.\n");
+        return -1;
+    }
+
     line_t head; head.prev = NULL; head.next = NULL; //Declare and initialize head node
 
     /*Generate a list of terminal-friendly lines for viewing*/
@@ -45,6 +47,12 @@ int main()
     /*These variables must be kept track of all times*/
     line_t *cur_line; //Next unprinted line in list
     int pos[2] = {0, 0}; //Current pos of cursor
+    
+    /*Initialize screen mode*/
+    initscr();
+    noecho();
+    keypad(stdscr, 1);
+    raw();
 
     /*Print first page of document to screen*/
     cur_line = scr_out(first_line, VLINES);
@@ -115,9 +123,9 @@ int main()
 int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_sz, int max_len)
 {
     char **ret = malloc(1);
-    int len;
-    int cur;
-    int formatted_len;
+    int len = 0;
+    int cur = 0;
+    int formatted_len = 0;
     *new_sz = 0;
 
     for (int i = 0; i < sz; i++) {
@@ -127,15 +135,16 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
             /*Expand the new array*/
             char *str = calloc(max_len + 2, 1);
             head = list_add_next(head, str);
-
-            //TODO: fix fake lines
+            
             /*Give it a nice linebreak formatting (avoid breaking a word in half)*/
+            formatted_len = strlen(arr[i] + cur);
             if ((arr[i] + cur)[max_len - 1] != '\0') { //if line is too long
                 for (formatted_len = max_len; formatted_len > 0; formatted_len--) {
                     if ((arr[i] + cur)[formatted_len] == ' ') break;
                 }
-                if (formatted_len == 0) formatted_len = max_len;
-                else formatted_len++;
+
+                if (formatted_len == 0) formatted_len = strlen(arr[i] + cur); //If SPACE doesn't exist in line
+                else formatted_len++; //Print space at end of line
             }
             
             /*Put the divided line to new array position*/
