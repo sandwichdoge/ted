@@ -151,7 +151,7 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
                     if ((arr[i] + cur)[formatted_len] == ' ') break;
                 }
 
-                if (formatted_len == 0) formatted_len = strlen(arr[i] + cur); //If SPACE doesn't exist in line
+                if (formatted_len == 0) formatted_len = max_len; //If SPACE doesn't exist in line
                 else formatted_len++; //Print space at end of line
             }
             
