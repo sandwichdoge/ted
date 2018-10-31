@@ -5,17 +5,6 @@
 #include "ted.h"
 
 
-char** generate_terminal_friendly_array(char **arr, int sz, int *new_size, int max_len);
-int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_size, int max_len);
-int list_write_to_file(line_t *head, char *path, int flg_pos);
-void scr_clear();
-line_t* scr_out(line_t *head, int how_many);
-int print_line(char *data, int L);
-void update_pos(int pos[]);
-line_t* list_rewind(line_t *head, int how_many);
-int is_alpha(int c);
-
-
 int main(int argc, char *argv[])
 {
 
@@ -217,9 +206,9 @@ line_t* scr_out(line_t *head, int how_many)
 }
 
 
-//print a line at line number L
-//line is the data in buffer
-//L is terminal line no.
+/*print a line at line number L
+ *line is the data in buffer
+ *L is terminal line no.*/
 int print_line(char *data, int L)
 {
     mvaddstr(L, 0, data);

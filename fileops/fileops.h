@@ -2,8 +2,8 @@
 #define _file_ops_h
 #include <stdio.h>
 #include <stdlib.h>
-#include "str-utils/str-utils.h"
-#include "linked-list.h"
+#include "../str-utils/str-utils.h"
+#include "../linked-list.h"
 
 typedef node_t line_t;
 
