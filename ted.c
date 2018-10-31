@@ -15,23 +15,54 @@ typedef node_t line_t;
 char** generate_terminal_friendly_array(char **arr, int sz, int *new_size, int max_len);
 int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_size, int max_len);
 int list_write_to_file(line_t *head, char *path, int flg_pos);
+void scr_clear();
+line_t* scr_out(line_t *head, int how_many);
+int print_line(char *data, int L);
+void update_pos(int pos[]);
+
 
 int main()
 {
+     /*Initialize screen mode*/
+    initscr();
+    noecho();
+    keypad(stdscr, 1);
+    raw();
+
     char *file = "sample.txt";
 
     int line_count = 0;
     char **lines = file_read_to_array(file, &line_count);
+    line_t head; head.prev = NULL; head.next = NULL; //Declare and initialize head node
 
-    line_t head; head.prev = NULL; head.next = NULL; //Initialize head node
-
+    /*Generate a list of terminal-friendly lines for viewing*/
     int new_sz;
     generate_terminal_friendly_list(lines, line_count, &head, &new_sz, HLINES);
-    line_t *first_line = head.next; /*advance and discard head since it's garbage*/
-    //print_list(first_line);
-    list_write_to_file(first_line, "sample2.txt", HLINES + 1);
+    line_t *first_line = head.next; /*Advance and discard head because it's garbage*/
+    
+    /*Print first page of document to screen*/
+    line_t *cur_line; //Next unprinted line in list
+    int pos[2] = {0, 0};
+
+    scr_clear();
+    cur_line = scr_out(first_line, VLINES);
+    move(0, 0);
+    refresh();
+
+    /*Handle keypresses*/
+    while (1) {
+        int k = getch();
+        update_pos(pos);
+
+        if (k == KEY_F(2)) break;
+        switch (k) {
+            case KEY_DOWN:
+                move(pos[0] + 1, pos[1]);
+        }
+    }
 
     free_str_array(lines, line_count);
+    endwin();
 
     return 0;
 }
@@ -78,9 +109,10 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
             (*new_sz) += 1;
         }
 
-        head->str[max_len+1] = 1;
-
+        head->str[max_len+1] = 1; //Natural end of line
     }
+
+    head->str[max_len+1] = 0; //Do not add LF to last line
 
     return 0;
 }
@@ -120,4 +152,43 @@ int list_write_to_file(line_t *head, char *path, int flg_pos)
     fclose(fd);
     
     return 0;
+}
+
+
+/*Clear the screen*/
+void scr_clear()
+{
+    erase();
+    refresh();
+}
+
+
+/*Print a specific number of lines to the screen, starting from head*/
+line_t* scr_out(line_t *head, int how_many)
+{
+    int l = 0; //line no
+    while (head != NULL && l < how_many) {
+        print_line(head->str, l);
+        head = head->next;
+        l++;
+    }
+
+    return head;
+}
+
+
+//print a line at line number L
+//line is the data in buffer
+//L is terminal line no.
+int print_line(char *data, int L)
+{
+    mvaddstr(L, 0, data);
+    return 0;
+}
+
+
+void update_pos(int pos[])
+{
+    pos[0] = getcury(stdscr);
+    pos[1] = getcurx(stdscr);
 }
