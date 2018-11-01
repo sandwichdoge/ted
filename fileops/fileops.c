@@ -39,12 +39,11 @@ int list_write_to_file(line_t *head, char *path, int flg_pos)
     if (fd == NULL) return -1;
 
     char *buf = calloc(flg_pos, 1);
-    int lineno = 0;
     int len;
 
     /*print a line, then print LF*/
     while (head) {
-        lineno++;
+        memset(buf, 0, flg_pos);
         strncpy(buf, head->str, flg_pos-1);
         len = strlen(buf);
 

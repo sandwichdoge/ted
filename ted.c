@@ -22,14 +22,14 @@ int main(int argc, char *argv[])
     /*Generate a list of terminal-friendly lines for viewing*/
     int new_sz;
     generate_terminal_friendly_list(lines, line_count, &head, &new_sz, HLINES);
-    line_t *first_line = head.next; /*Advance and discard head because it's garbage*/
-    first_line->prev = NULL;
+    line_t *doc_begin = head.next; /*Advance and discard head because it's garbage*/
+    doc_begin->prev = NULL;
 
     /*These variables must be kept track of at all times*/
     line_t *next_page; //Next unprinted line in list
-    line_t *cur_page = first_line; //First line shown on the screen
+    line_t *cur_page = doc_begin; //First line shown on the screen
     int pos[2] = {0, 0}; //Current pos of cursor
-    line_t *cur_line = first_line;
+    line_t *cur_line = doc_begin;
     int cur_lineno = 0;
 
     /*Initialize screen mode*/
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     raw();
 
     /*Print first page of document to screen*/
-    next_page = scr_out(first_line, VLINES);
+    next_page = scr_out(doc_begin, VLINES);
     move(0, 0);
     refresh();
 
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
                 cur_lineno = INCREMENT(cur_lineno, new_sz);
                 break;
             case KEY_UP:
-                if (pos[0] == 0 && cur_page != first_line) {
+                if (pos[0] == 0 && cur_page != doc_begin) {
                     cur_page = list_rewind(cur_page, VLINES);
                     next_page = scr_out(cur_page, VLINES);
                     move(VLINES - 1, pos[1]);
@@ -99,12 +99,25 @@ int main(int argc, char *argv[])
             case KEY_HOME:
                 move(pos[0], 0);
                 break;
+
+            /*Backspace*/
+            case 127:
+                cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+                str_remove(cur_line->str, pos[1]-1, 1);
+                print_line(cur_line->str, pos[0]);
+                move(pos[0], pos[1] - 1);
+                break;
+
+            /*Key combo*/
+            case 19: //CTRL+S - Save file
+                list_write_to_file(doc_begin, file, HLINES + 1);
+                break;
         }
 
-        /*INPUT KEYS (a-z, A-Z, 0-9, etc.)*/
+        /*INPUT KEYS (a-z, A-Z, 0-9, etc. and non-special symbols)*/
         /*Insert a char at cursor position, pos[0] is the line no and pos[1] is the char no.*/
         /*Only supports ASCII characters for now*/
-        if (is_alpha(k)) {
+        if (is_alpha(k) || is_acceptable_ascii_symbols(k)) {
             cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
             /*Insert string into cur_line*/
             if (strlen(cur_line->str) < HLINES) { //If current line's length hasnt reached limit, insert typed key
@@ -262,4 +275,13 @@ line_t *list_rewind(line_t *head, int how_many)
 int is_alpha(int c)
 {
     return (c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z');
+}
+
+int is_acceptable_ascii_symbols(int c)
+{
+    static int ascii_symbols[] = {' ', '_', '-', '?', '.', ',', ';', ':', '+', '*', '/', '\\', '&', '%', '$', '#', '@', '!', '=', '[', ']', '{', '}', '<', '>', '`', '~', '|', '"', '\''};
+    for (int i = 0; i < sizeof(ascii_symbols); i++) {
+        if (c == ascii_symbols[i]) return 1;
+    }
+    return 0;
 }

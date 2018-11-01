@@ -20,3 +20,4 @@ void update_pos(int pos[]);
 line_t* list_rewind(line_t *head, int how_many);
 void line_push(line_t *head, int pos, int max_len);
 int is_alpha(int c);
+int is_acceptable_ascii_symbols(int c);

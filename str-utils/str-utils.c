@@ -77,3 +77,14 @@ void char_insert(char *str, int pos, char c)
     strcat(str, tail);
     free(tail);
 }
+
+
+/*Remove some characters in the middle of a string*/
+int str_remove(char *str, int pos, int len)
+{
+	if (len + pos > strlen(str)) return -1;
+	char *tail = str + pos + len;
+	strcpy(str + pos, tail);
+
+	return 0;
+}
