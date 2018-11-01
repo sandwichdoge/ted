@@ -7,7 +7,6 @@
 
 int main(int argc, char *argv[])
 {
-
     if (argc < 2) return -1;
     char *file = argv[1];
 
@@ -113,11 +112,13 @@ int main(int argc, char *argv[])
                 print_line(cur_line->str, pos[0]); //Display modified line on screen
                 move(pos[0], pos[1]+1);
             }
-            else { //If line has reach len limit
-                //Append last char of current line to the front of next line, remove that char from cur line, insert char at cursor pos
-                //This should be a loop, to account for the following lines in case they're at max len as well
+            else { //If line has reached len limit
+                //Push list by 1 char to make space at cursor pos
+                line_push(cur_line, pos[1], HLINES);
+                char_insert(cur_line->str, pos[1], k);
+                next_page = scr_out(cur_page, VLINES);
+                move(pos[0], pos[1] + 1);
             }
-
         }
 
     }
@@ -126,6 +127,30 @@ int main(int argc, char *argv[])
     endwin();
 
     return 0;
+}
+
+
+/*Append last char of current line to the front of next line, remove that char from cur line, insert char at cursor pos*/
+/*Try recursion again?*/
+void line_push(line_t *head, int pos, int max_len)
+{
+    char last_char;
+    while (head != NULL && strlen(head->str) == max_len) {
+        last_char = 0;
+        if (strlen(head->str) == max_len) {
+            last_char = head->str[max_len-1];
+            head->str[max_len-1] = '\0';
+            if (head->next == NULL) {
+                char *str = malloc(max_len + 1);
+                head = list_add_next(head, str); //last line is at max len
+            }
+            else {
+                head = head->next;
+            }
+            char_insert(head->str, 0, last_char);
+        }
+        else break;
+    }
 }
 
 
