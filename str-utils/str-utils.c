@@ -79,6 +79,17 @@ void char_insert(char *str, int pos, char c)
 }
 
 
+void str_insert(char *str, int pos, char *substr)
+{
+    char *tail = malloc(strlen(str + pos) + 1);
+    strcpy(tail, str + pos);
+    str[pos] = '\0';
+    strcat(str, substr);
+    strcat(str, tail);
+    free(tail);
+}
+
+
 /*Remove some characters in the middle of a string*/
 int str_remove(char *str, int pos, int len)
 {

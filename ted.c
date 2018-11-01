@@ -123,14 +123,15 @@ int main(int argc, char *argv[])
             if (strlen(cur_line->str) < HLINES) { //If current line's length hasnt reached limit, insert typed key
                 char_insert(cur_line->str, pos[1], k);
                 print_line(cur_line->str, pos[0]); //Display modified line on screen
-                move(pos[0], pos[1]+1);
+                move(pos[0], pos[1]+1 > HLINES ? HLINES : pos[1] + 1);
             }
             else { //If line has reached len limit
                 //Push list by 1 char to make space at cursor pos
-                line_push(cur_line, pos[1], HLINES);
-                char_insert(cur_line->str, pos[1], k);
+                line_push(cur_line, pos[1], 1, HLINES);
+                memcpy(cur_line->str + pos[1], (char*)&k, 1);
                 next_page = scr_out(cur_page, VLINES);
-                move(pos[0], pos[1] + 1);
+                if (pos[1] + 1 >= HLINES) move(pos[0] + 1, 0);
+                else move(pos[0], pos[1]+1);
             }
         }
 
@@ -144,26 +145,33 @@ int main(int argc, char *argv[])
 
 
 /*Append last char of current line to the front of next line, remove that char from cur line, insert char at cursor pos*/
-/*Try recursion again?*/
-void line_push(line_t *head, int pos, int max_len)
+void line_push(line_t *head, int pos, int n, const int max_len)
 {
-    char last_char;
-    while (head != NULL && strlen(head->str) == max_len) {
-        last_char = 0;
-        if (strlen(head->str) == max_len) {
-            last_char = head->str[max_len-1];
-            head->str[max_len-1] = '\0';
-            if (head->next == NULL) {
-                char *str = malloc(max_len + 1);
-                head = list_add_next(head, str); //last line is at max len
-            }
-            else {
-                head = head->next;
-            }
-            char_insert(head->str, 0, last_char);
-        }
-        else break;
+    char *str = NULL;
+    char *last_word = calloc(n + 1, 1);
+    int len = strlen(head->str);
+
+    //printf("\nPUSHING:[pos:%d][n:%d][len:%d]\n%s\n", pos, n, len, head->str);
+
+    if (len + n >= max_len) {
+        memcpy(last_word, head->str + max_len - n, n);
+        head->str[max_len - n] = '\0'; //head->str is trimmed now
+        //printf("Last word:[%s]\nCurrent len:[%d]\n", last_word, strlen(head->str));
+        line_push(head->next, 0, strlen(last_word), max_len);
+        memcpy(head->next->str, last_word, strlen(last_word));
     }
+
+    char *tail = malloc(strlen(&head->str[pos]) + 1); //Next: push tail by n
+    strcpy(tail, &head->str[pos]);
+    memcpy((&head->str[pos + n]), tail, strlen(tail));
+    //print_raw_mem(&head->str[pos], 40);
+
+    //PROBLEM here, world should not be at pos 11, 6 instead
+    //printf("TAIL:Copied [%s] into [%s] at pos [%d], got [%s]\n", tail, (&head->str[pos]), n, head->str);
+
+    free(tail);
+    tail = NULL;
+    free(last_word);
 }
 
 
@@ -249,7 +257,9 @@ line_t* scr_out(line_t *head, int how_many)
  *L is terminal line no.*/
 int print_line(char *data, int L)
 {
-    mvaddstr(L, 0, data);
+    move(L, 0);
+    clrtoeol(); //clear current line
+    addstr(data);
     return 0;
 }
 
