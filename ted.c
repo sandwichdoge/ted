@@ -102,10 +102,12 @@ int main(int argc, char *argv[])
 
             /*Backspace*/
             case 127:
-                cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
-                str_remove(cur_line->str, pos[1]-1, 1);
-                print_line(cur_line->str, pos[0]);
-                move(pos[0], pos[1] - 1);
+                if (pos[1] > 0) {
+                    cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+                    str_remove(cur_line->str, pos[1]-1, 1);
+                    print_line(cur_line->str, pos[0]);
+                    move(pos[0], pos[1] - 1);
+                }
                 break;
 
             /*Key combo*/
@@ -127,8 +129,16 @@ int main(int argc, char *argv[])
             }
             else { //If line has reached len limit
                 //Push list by 1 char to make space at cursor pos
+                //If fake line, proceed to line_push() normally, otherwise make a new real line, mark current line as fake
+                if (cur_line->str[LF_FLAG] == 1) {
+                    char *str = calloc(HLINES + 1, 1);
+                    list_add_next(cur_line, str);
+                }
+
                 line_push(cur_line, pos[1], 1, HLINES);
                 memcpy(cur_line->str + pos[1], (char*)&k, 1);
+
+                /*Print out page and move cursor appropriately*/
                 next_page = scr_out(cur_page, VLINES);
                 if (pos[1] + 1 >= HLINES) move(pos[0] + 1, 0);
                 else move(pos[0], pos[1]+1);
@@ -151,12 +161,10 @@ void line_push(line_t *head, int pos, int n, const int max_len)
     char *last_word = calloc(n + 1, 1);
     int len = strlen(head->str);
 
-    //printf("\nPUSHING:[pos:%d][n:%d][len:%d]\n%s\n", pos, n, len, head->str);
-
     if (len + n >= max_len) {
         memcpy(last_word, head->str + max_len - n, n);
         head->str[max_len - n] = '\0'; //head->str is trimmed now
-        //printf("Last word:[%s]\nCurrent len:[%d]\n", last_word, strlen(head->str));
+        head->str[max_len + 1] = 0; //Mark current line as fake because it's been pushed to next line
         line_push(head->next, 0, strlen(last_word), max_len);
         memcpy(head->next->str, last_word, strlen(last_word));
     }
@@ -164,10 +172,6 @@ void line_push(line_t *head, int pos, int n, const int max_len)
     char *tail = malloc(strlen(&head->str[pos]) + 1); //Next: push tail by n
     strcpy(tail, &head->str[pos]);
     memcpy((&head->str[pos + n]), tail, strlen(tail));
-    //print_raw_mem(&head->str[pos], 40);
-
-    //PROBLEM here, world should not be at pos 11, 6 instead
-    //printf("TAIL:Copied [%s] into [%s] at pos [%d], got [%s]\n", tail, (&head->str[pos]), n, head->str);
 
     free(tail);
     tail = NULL;
