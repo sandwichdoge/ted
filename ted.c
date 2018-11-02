@@ -128,13 +128,7 @@ int main(int argc, char *argv[])
                 move(pos[0], pos[1]+1 > HLINES ? HLINES : pos[1] + 1);
             }
             else { //If line has reached len limit
-                //Push list by 1 char to make space at cursor pos
-                //If fake line, proceed to line_push() normally, otherwise make a new real line, mark current line as fake
-                if (cur_line->str[LF_FLAG] == 1) {
-                    char *str = calloc(HLINES + 1, 1);
-                    list_add_next(cur_line, str);
-                }
-
+                /*Push list by 1 char to make space at cursor pos*/
                 line_push(cur_line, pos[1], 1, HLINES);
                 memcpy(cur_line->str + pos[1], (char*)&k, 1);
 
@@ -157,14 +151,22 @@ int main(int argc, char *argv[])
 /*Append last char of current line to the front of next line, remove that char from cur line, insert char at cursor pos*/
 void line_push(line_t *head, int pos, int n, const int max_len)
 {
-    char *str = NULL;
+    char *str = NULL, *newline = NULL;
     char *last_word = calloc(n + 1, 1);
     int len = strlen(head->str);
+    int flg = 0;
 
     if (len + n >= max_len) {
         memcpy(last_word, head->str + max_len - n, n);
         head->str[max_len - n] = '\0'; //head->str is trimmed now
+        if (head->str[max_len + 1] == 1) flg = 1; //PRESERVE REAL LINEBREAK
         head->str[max_len + 1] = 0; //Mark current line as fake because it's been pushed to next line
+        if (flg == 1) { //If fake line, proceed to line_push() normally, otherwise make a new real line
+            newline = calloc(max_len + 1, 1);
+            list_add_next(head, newline);
+            head->next->str[max_len + 1] = 1; //PRESERVE REAL LINEBREAK
+        }
+
         line_push(head->next, 0, strlen(last_word), max_len);
         memcpy(head->next->str, last_word, strlen(last_word));
     }
