@@ -155,12 +155,12 @@ int main(int argc, char *argv[])
 /*Pop a few characters at pos*/
 void line_pop(line_t *head, int pos, int n, const int max_len)
 {
-    printf("PROCESSING %s\n", head->str);
+    int flg = 0;
     if (pos + n > max_len) {
-        printf("n:%d[strlen:%d]\n", n, strlen(head->next->str));
         if (head->str[max_len + 1] != 1) {
             line_pop(head->next, 0, pos + n - max_len, max_len);
         }
+        else return;
         line_pop(head, pos, max_len - pos, max_len);
     }
     else {
@@ -173,7 +173,11 @@ void line_pop(line_t *head, int pos, int n, const int max_len)
         str_remove(head->str, pos, n);
 
         strcat(head->str, first_word);
-        if (strlen(head->str) == 0) list_remove(head);
+        if (strlen(head->str) == 0) {
+            flg = head->str[max_len + 1];           //PRESERVE REAL LF
+            head->prev->str[max_len + 1] = flg; //PRESERVE REAL LF
+            list_remove(head);
+        }
 
         free(first_word);
     }
