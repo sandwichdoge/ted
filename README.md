@@ -1,4 +1,15 @@
 # ted
-Terminal text editor.
+Terminal text editor. (WIP)
 
-Work in progress.
+Word-wrapped. Focused on viewing and editing of text documents instead of source code files.
+
+- Compile
+```
+make
+make clean
+```
+
+- Run
+```
+./ted sample.txt
+```
