@@ -3,7 +3,8 @@
 #include "str-utils/str-utils.h"
 
 #define HLINES 80
-#define VLINES 24
+#define VLINES 23
+#define MENU_LINE VLINES + 1
 #define LF_FLAG HLINES + 1
 #define DECREMENT(x) (x - 1 < 0 ? 0 : x - 1)
 #define INCREMENT(x, max) (x > max ? max : x + 1) //increment value with max threshold
@@ -22,3 +23,4 @@ void line_push(line_t *head, int pos, int n, int max_len);
 void line_pop(line_t *head, int pos, int n, const int max_len);
 int is_alpha(int c);
 int is_acceptable_ascii_symbols(int c);
+void init_control_line();

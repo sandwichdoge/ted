@@ -4,6 +4,8 @@
 #include <string.h>
 #include "ted.h"
 
+WINDOW *textw;
+WINDOW *menuw;
 
 int main(int argc, char *argv[])
 {
@@ -12,7 +14,7 @@ int main(int argc, char *argv[])
 
     int line_count = 0;
     char **lines = file_read_to_array(file, &line_count);
-    if (lines == NULL) {
+    if (line_count < 0) {
         printf("Cannot open file %s.\n", file);
         return -1;
     }
@@ -38,10 +40,16 @@ int main(int argc, char *argv[])
     keypad(stdscr, 1);
     raw();
 
+
     /*Print first page of document to screen*/
+    textw = newwin(VLINES - 1, HLINES - 1, 0, 0);
     next_page = scr_out(doc_begin, VLINES);
     move(0, 0);
     refresh();
+
+    /*Draw control line*/
+    init_control_line();
+    
 
     /*Handle keypresses*/
     while (1) {
@@ -174,8 +182,8 @@ void line_pop(line_t *head, int pos, int n, const int max_len)
 
         strcat(head->str, first_word);
         if (strlen(head->str) == 0) {
-            flg = head->str[max_len + 1];           //PRESERVE REAL LF
-            head->prev->str[max_len + 1] = flg; //PRESERVE REAL LF
+            flg = head->str[max_len + 1]; //PRESERVE REAL LF
+            if (head->prev != NULL) head->prev->str[max_len + 1] = flg;
             list_remove(head);
         }
 
@@ -227,7 +235,10 @@ void line_push(line_t *head, int pos, int n, const int max_len)
  */
 int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_sz, int max_len)
 {
-    char **ret = malloc(1);
+    if (arr == NULL) {
+        char *str = calloc(max_len + 1, 1);
+        head = list_add_next(head, str);
+    }
     int len = 0;
     int cur = 0;
     int formatted_len = 0;
@@ -272,17 +283,17 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
 
 
 /*Clear the screen*/
-void scr_clear()
+void scr_clear(WINDOW *win)
 {
-    erase();
-    refresh();
+    werase(win);
+    wrefresh(win);
 }
 
 
 /*Print a specific number of lines to the screen, starting from head*/
 line_t* scr_out(line_t *head, int how_many)
 {
-    scr_clear();
+    scr_clear(textw);
     int l = 0; //line no
     while (l < how_many) {
         print_line(head->str, l);
@@ -321,6 +332,21 @@ line_t *list_rewind(line_t *head, int how_many)
     }
 
     return head;
+}
+
+
+void init_control_line()
+{
+    menuw = newwin(1, HLINES-1, VLINES, 0);
+    box(menuw, 0, 0);
+    wattron(menuw, A_STANDOUT);
+    mvwprintw(menuw, 0, 0, "CTRL+S:Save");
+    wattroff(menuw, A_STANDOUT);
+    mvwprintw(menuw, 0, strlen("CTRL+S:Save"), "    ");
+    wattron(menuw, A_STANDOUT);
+    mvwprintw(menuw, 0, strlen("CTRL+S:Save    "), "F2:Quit");
+    wattroff(menuw, A_STANDOUT);
+    wrefresh(menuw);
 }
 
 
