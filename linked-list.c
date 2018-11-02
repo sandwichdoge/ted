@@ -99,10 +99,19 @@ node_t *list_traverse(node_t *head, int direction, int n)
 }
 
 
+void list_remove(node_t *head)
+{
+    node_t *nxt = head->next;
+    if (head->prev) head->prev->next = nxt;
+    if (nxt) nxt->prev = head->prev;
+}
+
+
 void print_list(node_t *head)
 {
     while (head != NULL) {
-        printf(">%s[%d]\n", head->str, head->str[81]);
+        //printf(">%s[%d]\n", head->str, head->str[81]);
+        printf(">%s\n", head->str);
         head = head->next;
     }
 }
