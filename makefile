@@ -1,5 +1,5 @@
 all: ted.o fileops.o linked-list.o str-utils.o
-	gcc -g ted.o fileops.o linked-list.o str-utils.o -lncurses
+	gcc -g ted.o fileops.o linked-list.o str-utils.o -lncurses -o ted
 
 test: fileops.o linked-list.o str-utils.o test.o
 	gcc -g test.o fileops.o linked-list.o str-utils.o
