@@ -94,7 +94,8 @@ int main(int argc, char *argv[])
                 }
                 break;
             case KEY_END:
-                move(pos[0], HLINES - 1);
+                cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+                move(pos[0], strlen(cur_line->str) >= HLINES ? HLINES - 1 : strlen(cur_line->str));
                 break;
             case KEY_HOME:
                 move(pos[0], 0);
@@ -104,7 +105,7 @@ int main(int argc, char *argv[])
             case 127:
                 if (pos[1] > 0) {
                     cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
-                    line_pop(cur_line, pos[1], 1, HLINES);
+                    line_pop(cur_line, pos[1] - 1, 1, HLINES);
                     scr_out(cur_page, HLINES);
                     move(pos[0], pos[1] - 1);
                 }
@@ -154,12 +155,12 @@ int main(int argc, char *argv[])
 /*Pop a few characters at pos*/
 void line_pop(line_t *head, int pos, int n, const int max_len)
 {
-    printf("PROCESSING %s\n", head->str);
+    int flg = 0;
     if (pos + n > max_len) {
-        printf("n:%d[strlen:%d]\n", n, strlen(head->next->str));
         if (head->str[max_len + 1] != 1) {
             line_pop(head->next, 0, pos + n - max_len, max_len);
         }
+        else return;
         line_pop(head, pos, max_len - pos, max_len);
     }
     else {
@@ -172,7 +173,11 @@ void line_pop(line_t *head, int pos, int n, const int max_len)
         str_remove(head->str, pos, n);
 
         strcat(head->str, first_word);
-        if (strlen(head->str) == 0) list_remove(head);
+        if (strlen(head->str) == 0) {
+            flg = head->str[max_len + 1];           //PRESERVE REAL LF
+            head->prev->str[max_len + 1] = flg; //PRESERVE REAL LF
+            list_remove(head);
+        }
 
         free(first_word);
     }
