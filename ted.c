@@ -94,7 +94,8 @@ int main(int argc, char *argv[])
                 }
                 break;
             case KEY_END:
-                move(pos[0], HLINES - 1);
+                cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+                move(pos[0], strlen(cur_line->str) >= HLINES ? HLINES - 1 : strlen(cur_line->str));
                 break;
             case KEY_HOME:
                 move(pos[0], 0);
@@ -104,7 +105,7 @@ int main(int argc, char *argv[])
             case 127:
                 if (pos[1] > 0) {
                     cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
-                    line_pop(cur_line, pos[1], 1, HLINES);
+                    line_pop(cur_line, pos[1] - 1, 1, HLINES);
                     scr_out(cur_page, HLINES);
                     move(pos[0], pos[1] - 1);
                 }
