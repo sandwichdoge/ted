@@ -4,8 +4,6 @@
 #include <string.h>
 #include "ted.h"
 
-WINDOW *textw;
-WINDOW *menuw;
 
 int main(int argc, char *argv[])
 {
@@ -50,7 +48,6 @@ int main(int argc, char *argv[])
     /*Draw control line*/
     init_control_line();
     
-
     /*Handle keypresses*/
     while (1) {
         int k = getch();
@@ -97,12 +94,15 @@ int main(int argc, char *argv[])
                     move(pos[0] + 1, 0);
                     cur_lineno = INCREMENT(cur_lineno, new_sz);
                 }
-                else {
-                    move(pos[0], pos[1] + 1);
+                else { //TODO: handle TABs
+                    cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+                    if (cur_line->str[pos[1] + 1] == '\t') move(pos[0], pos[1] + 4); //TAB handle
+                    else move(pos[0], pos[1] + 1);
                 }
                 break;
             case KEY_END:
                 cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+                print_control_line(cur_line->str); //DEBUG
                 move(pos[0], strlen(cur_line->str) >= HLINES ? HLINES - 1 : strlen(cur_line->str));
                 break;
             case KEY_HOME:
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
                 if (pos[1] > 0) {
                     cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
                     line_pop(cur_line, pos[1] - 1, 1, HLINES);
-                    scr_out(cur_page, HLINES);
+                    scr_out(cur_page, VLINES);
                     move(pos[0], pos[1] - 1);
                 }
                 else { //Backspace is pressed at start of line
@@ -254,7 +254,7 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
             
             /*Give it a nice linebreak formatting (avoid breaking a word in half)*/
             formatted_len = strlen(arr[i] + cur);
-            if ((arr[i] + cur)[max_len - 1] != '\0') { //if line is too long
+            if (strlen(arr[i] + cur) > max_len) { //if line is too long
                 for (formatted_len = max_len; formatted_len > 0; formatted_len--) {
                     if ((arr[i] + cur)[formatted_len] == ' ') break;
                 }
@@ -335,18 +335,34 @@ line_t *list_rewind(line_t *head, int how_many)
 }
 
 
+void print_control_line(char *str)
+{
+    wmove(menuw, 0, 1);
+    wclrtoeol(menuw);
+    mvwprintw(menuw, 0, 1, str);
+    wrefresh(menuw);
+
+}
+
+
+void reset_control_line()
+{
+    wattron(menuw, A_STANDOUT);
+    mvwprintw(menuw, 0, 1, "CTRL+S:Save");
+    wattroff(menuw, A_STANDOUT);
+    mvwprintw(menuw, 0, 1 + strlen("CTRL+S:Save"), "    ");
+    wattron(menuw, A_STANDOUT);
+    mvwprintw(menuw, 0, 1 + strlen("CTRL+S:Save    "), "F2:Quit");
+    wattroff(menuw, A_STANDOUT);
+    wrefresh(menuw);
+}
+
+
 void init_control_line()
 {
     menuw = newwin(1, HLINES-1, VLINES, 0);
     box(menuw, 0, 0);
-    wattron(menuw, A_STANDOUT);
-    mvwprintw(menuw, 0, 0, "CTRL+S:Save");
-    wattroff(menuw, A_STANDOUT);
-    mvwprintw(menuw, 0, strlen("CTRL+S:Save"), "    ");
-    wattron(menuw, A_STANDOUT);
-    mvwprintw(menuw, 0, strlen("CTRL+S:Save    "), "F2:Quit");
-    wattroff(menuw, A_STANDOUT);
-    wrefresh(menuw);
+    reset_control_line();
 }
 
 
