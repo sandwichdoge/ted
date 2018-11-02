@@ -94,8 +94,9 @@ void str_insert(char *str, int pos, char *substr)
 int str_remove(char *str, int pos, int len)
 {
 	if (len + pos > strlen(str)) return -1;
-	char *tail = str + pos + len;
+	char *tail = strdup(str + pos + len);
 	strcpy(str + pos, tail);
 
+	free(tail);
 	return 0;
 }

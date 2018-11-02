@@ -15,6 +15,7 @@ node_t* list_add_next(node_t *head, char *str);
 node_t *list_add_front(node_t *head, char *str);
 node_t *list_add_back(node_t *head, char *str);
 node_t *list_traverse(node_t *head, int direction, int n);
+void list_remove(node_t *head);
 void print_list(node_t *head);
 
 #endif

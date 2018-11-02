@@ -19,5 +19,6 @@ int print_line(char *data, int L);
 void update_pos(int pos[]);
 line_t* list_rewind(line_t *head, int how_many);
 void line_push(line_t *head, int pos, int n, int max_len);
+void line_pop(line_t *head, int pos, int n, const int max_len);
 int is_alpha(int c);
 int is_acceptable_ascii_symbols(int c);

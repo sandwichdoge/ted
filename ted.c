@@ -104,9 +104,12 @@ int main(int argc, char *argv[])
             case 127:
                 if (pos[1] > 0) {
                     cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
-                    str_remove(cur_line->str, pos[1]-1, 1);
-                    print_line(cur_line->str, pos[0]);
+                    line_pop(cur_line, pos[1], 1, HLINES);
+                    scr_out(cur_page, HLINES);
                     move(pos[0], pos[1] - 1);
+                }
+                else { //Backspace is pressed at start of line
+
                 }
                 break;
 
@@ -148,7 +151,36 @@ int main(int argc, char *argv[])
 }
 
 
-/*Append last char of current line to the front of next line, remove that char from cur line, insert char at cursor pos*/
+/*Pop a few characters at pos*/
+void line_pop(line_t *head, int pos, int n, const int max_len)
+{
+    printf("PROCESSING %s\n", head->str);
+    if (pos + n > max_len) {
+        printf("n:%d[strlen:%d]\n", n, strlen(head->next->str));
+        if (head->str[max_len + 1] != 1) {
+            line_pop(head->next, 0, pos + n - max_len, max_len);
+        }
+        line_pop(head, pos, max_len - pos, max_len);
+    }
+    else {
+        char *first_word = calloc(n + 1, 1);
+        if (head->next != NULL && head->str[max_len + 1] != 1 && strlen(head->next->str)) {
+            memcpy(first_word, head->next->str, n);
+            line_pop(head->next, 0, n, max_len);
+        }
+        if (pos + n > strlen(head->str)) n = strlen(head->str) - pos;
+        str_remove(head->str, pos, n);
+
+        strcat(head->str, first_word);
+        if (strlen(head->str) == 0) list_remove(head);
+
+        free(first_word);
+    }
+    
+}
+
+
+/*Make space at pos to insert string later*/
 void line_push(line_t *head, int pos, int n, const int max_len)
 {
     char *str = NULL, *newline = NULL;
