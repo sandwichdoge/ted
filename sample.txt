@@ -1,4 +1,3 @@
-
 I guess you can't wait any more to see some action. Back to our odyssey of curses functions. Now that curses is initialized, let's interact with 
 world.
 

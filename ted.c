@@ -2,37 +2,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "fileops.h" //file_read_to_array()
-#include "linked-list.h"
-
-#define HLINES 80
-#define VLINES 24
-#define LF_FLAG HLINES + 1
-
-typedef node_t line_t;
-
-
-char** generate_terminal_friendly_array(char **arr, int sz, int *new_size, int max_len);
-int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_size, int max_len);
-int list_write_to_file(line_t *head, char *path, int flg_pos);
-void scr_clear();
-line_t* scr_out(line_t *head, int how_many);
-int print_line(char *data, int L);
-void update_pos(int pos[]);
-line_t* list_rewind(line_t *head, int how_many);
+#include "ted.h"
 
 
 int main(int argc, char *argv[])
 {
-
     if (argc < 2) return -1;
     char *file = argv[1];
-
 
     int line_count = 0;
     char **lines = file_read_to_array(file, &line_count);
     if (lines == NULL) {
-        printf("Cannot open file.\n");
+        printf("Cannot open file %s.\n", file);
         return -1;
     }
 
@@ -41,13 +22,16 @@ int main(int argc, char *argv[])
     /*Generate a list of terminal-friendly lines for viewing*/
     int new_sz;
     generate_terminal_friendly_list(lines, line_count, &head, &new_sz, HLINES);
-    line_t *first_line = head.next; /*Advance and discard head because it's garbage*/
-    first_line->prev = NULL;
+    line_t *doc_begin = head.next; /*Advance and discard head because it's garbage*/
+    doc_begin->prev = NULL;
 
-    /*These variables must be kept track of all times*/
-    line_t *cur_line; //Next unprinted line in list
+    /*These variables must be kept track of at all times*/
+    line_t *next_page; //Next unprinted line in list
+    line_t *cur_page = doc_begin; //First line shown on the screen
     int pos[2] = {0, 0}; //Current pos of cursor
-    
+    line_t *cur_line = doc_begin;
+    int cur_lineno = 0;
+
     /*Initialize screen mode*/
     initscr();
     noecho();
@@ -55,7 +39,7 @@ int main(int argc, char *argv[])
     raw();
 
     /*Print first page of document to screen*/
-    cur_line = scr_out(first_line, VLINES);
+    next_page = scr_out(doc_begin, VLINES);
     move(0, 0);
     refresh();
 
@@ -64,52 +48,134 @@ int main(int argc, char *argv[])
         int k = getch();
         update_pos(pos);
 
+        /*FUNCTION KEYS*/
         if (k == KEY_F(2)) break;
+
         switch (k) {
+            /*NAVIGATION KEYS*/
             case KEY_DOWN:
                 if (pos[0] == VLINES - 1) {
-                    cur_line = scr_out(cur_line, VLINES);
+                    cur_page = next_page;
+                    next_page = scr_out(next_page, VLINES);
                     move(0, pos[1]);
                 }
-                else {
+                else if (cur_lineno < new_sz) {
                     move(pos[0] + 1, pos[1]);
                 }
+                cur_lineno = INCREMENT(cur_lineno, new_sz);
                 break;
             case KEY_UP:
-                if (pos[0] == 0) {
-                    cur_line = list_rewind(cur_line, VLINES * 2);
-                    cur_line = scr_out(cur_line, VLINES);
+                if (pos[0] == 0 && cur_page != doc_begin) {
+                    cur_page = list_rewind(cur_page, VLINES);
+                    next_page = scr_out(cur_page, VLINES);
                     move(VLINES - 1, pos[1]);
                 }
                 else {
                     move(pos[0] - 1, pos[1]);
                 }
+                cur_lineno = DECREMENT(cur_lineno);
                 break;
             case KEY_LEFT:
-                if (pos[1] == 0) {
-                    move(pos[0] - 1, HLINES - 1);
+                if (pos[1] == 0) { //Left key pressed at start of line
+                    move(cur_lineno > 0 ? pos[0] - 1 : pos[0], cur_lineno > 0 ? HLINES - 1 : pos[1]); //Do nothing if it's 1st line of doc
+                    cur_lineno = DECREMENT(cur_lineno);
                 }
                 else {
                     move(pos[0], pos[1] - 1);
                 }
                 break;
-            case KEY_RIGHT:
+            case KEY_RIGHT: //Right key pressed at end of line
                 if (pos[1] == HLINES - 1) {
                     move(pos[0] + 1, 0);
+                    cur_lineno = INCREMENT(cur_lineno, new_sz);
                 }
                 else {
                     move(pos[0], pos[1] + 1);
                 }
                 break;
-        }
-    }
+            case KEY_END:
+                move(pos[0], HLINES - 1);
+                break;
+            case KEY_HOME:
+                move(pos[0], 0);
+                break;
 
-    //list_write_to_file(first_line, "sample2.txt", HLINES + 1);
+            /*Backspace*/
+            case 127:
+                if (pos[1] > 0) {
+                    cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+                    str_remove(cur_line->str, pos[1]-1, 1);
+                    print_line(cur_line->str, pos[0]);
+                    move(pos[0], pos[1] - 1);
+                }
+                break;
+
+            /*Key combo*/
+            case 19: //CTRL+S - Save file
+                list_write_to_file(doc_begin, file, HLINES + 1);
+                break;
+        }
+
+        /*INPUT KEYS (a-z, A-Z, 0-9, etc. and non-special symbols)*/
+        /*Insert a char at cursor position, pos[0] is the line no and pos[1] is the char no.*/
+        /*Only supports ASCII characters for now*/
+        if (is_alpha(k) || is_acceptable_ascii_symbols(k)) {
+            cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+            /*Insert string into cur_line*/
+            if (strlen(cur_line->str) < HLINES) { //If current line's length hasnt reached limit, insert typed key
+                char_insert(cur_line->str, pos[1], k);
+                print_line(cur_line->str, pos[0]); //Display modified line on screen
+                move(pos[0], pos[1]+1 > HLINES ? HLINES : pos[1] + 1);
+            }
+            else { //If line has reached len limit
+                //Push list by 1 char to make space at cursor pos
+                //If fake line, proceed to line_push() normally, otherwise make a new real line, mark current line as fake
+                if (cur_line->str[LF_FLAG] == 1) {
+                    char *str = calloc(HLINES + 1, 1);
+                    list_add_next(cur_line, str);
+                }
+
+                line_push(cur_line, pos[1], 1, HLINES);
+                memcpy(cur_line->str + pos[1], (char*)&k, 1);
+
+                /*Print out page and move cursor appropriately*/
+                next_page = scr_out(cur_page, VLINES);
+                if (pos[1] + 1 >= HLINES) move(pos[0] + 1, 0);
+                else move(pos[0], pos[1]+1);
+            }
+        }
+
+    }
 
     free_str_array(lines, line_count);
     endwin();
 
     return 0;
+}
+
+
+/*Append last char of current line to the front of next line, remove that char from cur line, insert char at cursor pos*/
+void line_push(line_t *head, int pos, int n, const int max_len)
+{
+    char *str = NULL;
+    char *last_word = calloc(n + 1, 1);
+    int len = strlen(head->str);
+
+    if (len + n >= max_len) {
+        memcpy(last_word, head->str + max_len - n, n);
+        head->str[max_len - n] = '\0'; //head->str is trimmed now
+        head->str[max_len + 1] = 0; //Mark current line as fake because it's been pushed to next line
+        line_push(head->next, 0, strlen(last_word), max_len);
+        memcpy(head->next->str, last_word, strlen(last_word));
+    }
+
+    char *tail = malloc(strlen(&head->str[pos]) + 1); //Next: push tail by n
+    strcpy(tail, &head->str[pos]);
+    memcpy((&head->str[pos + n]), tail, strlen(tail));
+
+    free(tail);
+    tail = NULL;
+    free(last_word);
 }
 
 
@@ -143,7 +209,7 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
                     if ((arr[i] + cur)[formatted_len] == ' ') break;
                 }
 
-                if (formatted_len == 0) formatted_len = strlen(arr[i] + cur); //If SPACE doesn't exist in line
+                if (formatted_len == 0) formatted_len = max_len; //If SPACE doesn't exist in line
                 else formatted_len++; //Print space at end of line
             }
             
@@ -162,42 +228,6 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
 
     head->str[max_len+1] = 0; //Do not add LF to last line
 
-    return 0;
-}
-
-
-/*This is a customized version
- *It will check the flg of line to see if the linebreak is real or was generated for viewing
- *flg_pos is always the last element of line, right after NULL TERM
- */
-int list_write_to_file(line_t *head, char *path, int flg_pos)
-{
-    FILE *fd = fopen(path, "w");
-    if (fd == NULL) return -1;
-
-    char *buf = calloc(flg_pos, 1);
-    int lineno = 0;
-    int len;
-
-    /*print a line, then print LF*/
-    while (head) {
-        lineno++;
-        strncpy(buf, head->str, flg_pos-1);
-        len = strlen(buf);
-
-        /*only write LF for lines with real LF*/
-        if (head->str[flg_pos] == 1) {
-            buf[len] = '\n';
-            len++;
-        }
-
-        fwrite(buf, len, 1, fd);
-        head = head->next;
-    }
-
-    free(buf);
-    fclose(fd);
-    
     return 0;
 }
 
@@ -226,12 +256,14 @@ line_t* scr_out(line_t *head, int how_many)
 }
 
 
-//print a line at line number L
-//line is the data in buffer
-//L is terminal line no.
+/*print a line at line number L
+ *line is the data in buffer
+ *L is terminal line no.*/
 int print_line(char *data, int L)
 {
-    mvaddstr(L, 0, data);
+    move(L, 0);
+    clrtoeol(); //clear current line
+    addstr(data);
     return 0;
 }
 
@@ -250,4 +282,20 @@ line_t *list_rewind(line_t *head, int how_many)
     }
 
     return head;
+}
+
+
+/*Return 1 if c is alphabet*/
+int is_alpha(int c)
+{
+    return (c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z');
+}
+
+int is_acceptable_ascii_symbols(int c)
+{
+    static int ascii_symbols[] = {' ', '_', '-', '?', '.', ',', ';', ':', '+', '*', '/', '\\', '&', '%', '$', '#', '@', '!', '=', '[', ']', '{', '}', '<', '>', '`', '~', '|', '"', '\''};
+    for (int i = 0; i < sizeof(ascii_symbols); i++) {
+        if (c == ascii_symbols[i]) return 1;
+    }
+    return 0;
 }

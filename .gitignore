@@ -1,2 +1,5 @@
 *.o
 *.out
+sample.txt
+sample-bk.txt
+test.c
