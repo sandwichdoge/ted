@@ -15,13 +15,23 @@ char **file_read_to_array(char *path, int *line_count)
 {
     size_t sz = file_get_size(path);
     FILE *fd = fopen(path, "r");
-    if (fd == NULL) return NULL;
+    if (fd == NULL) {
+        *line_count = -1;
+        return NULL;
+    }
     
     char* buf = (char*)malloc(sz);
     fread(buf, sz, 1, fd);
 
     char **lines = str_split(buf, "\n", line_count);
-
+    
+    if (*line_count == 0) { //There's only 1 line
+        lines = malloc(sizeof(char*));
+        lines[0] = malloc(sz + 1);
+        strcpy(lines[0], buf);
+        *line_count += 1;
+    }
+    
     free(buf);
 
     return lines;

@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 
     int line_count = 0;
     char **lines = file_read_to_array(file, &line_count);
-    if (lines == NULL) {
+    if (line_count < 0) {
         printf("Cannot open file %s.\n", file);
         return -1;
     }
@@ -173,7 +173,7 @@ void line_pop(line_t *head, int pos, int n, const int max_len)
         str_remove(head->str, pos, n);
 
         strcat(head->str, first_word);
-        if (strlen(head->str) == 0) {
+        if (strlen(head->str) == 0 && head->prev != NULL) {
             flg = head->str[max_len + 1];           //PRESERVE REAL LF
             head->prev->str[max_len + 1] = flg; //PRESERVE REAL LF
             list_remove(head);
@@ -227,7 +227,10 @@ void line_push(line_t *head, int pos, int n, const int max_len)
  */
 int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_sz, int max_len)
 {
-    char **ret = malloc(1);
+    if (arr == NULL) {
+        char *str = calloc(max_len + 1, 1);
+        head = list_add_next(head, str);
+    }
     int len = 0;
     int cur = 0;
     int formatted_len = 0;
