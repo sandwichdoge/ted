@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
 
     /*Print first page of document to screen*/
-    textw = newwin(VLINES - 1, HLINES - 1, 0, 0);
+    textw = newwin(VLINES, HLINES, 0, 0);
     next_page = scr_out(doc_begin, VLINES);
     move(0, 0);
     refresh();
@@ -360,7 +360,7 @@ void reset_control_line()
 
 void init_control_line()
 {
-    menuw = newwin(1, HLINES-1, VLINES, 0);
+    menuw = newwin(1, HLINES, VLINES, 0);
     box(menuw, 0, 0);
     reset_control_line();
 }
