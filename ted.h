@@ -28,3 +28,4 @@ int is_alpha(int c);
 int is_acceptable_ascii_symbols(int c);
 void init_control_line();
 void print_control_line(char *str);
+void goto_endline(line_t *line, int y, int max_len);

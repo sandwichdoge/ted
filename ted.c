@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
     while (1) {
         int k = getch();
         update_pos(pos);
+        cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
 
         /*FUNCTION KEYS*/
         if (k == KEY_F(2)) break;
@@ -81,29 +82,31 @@ int main(int argc, char *argv[])
                 cur_lineno = DECREMENT(cur_lineno);
                 break;
             case KEY_LEFT:
-                if (pos[1] == 0) { //Left key pressed at start of line
-                    move(cur_lineno > 0 ? pos[0] - 1 : pos[0], cur_lineno > 0 ? HLINES - 1 : pos[1]); //Do nothing if it's 1st line of doc
+                if (pos[1] == 0 && cur_lineno > 0) { //Left key pressed at start of line
+                    goto_endline(cur_line->prev, pos[0] - 1, HLINES); //Set cursor to end of previous line
                     cur_lineno = DECREMENT(cur_lineno);
+                }
+                else if (cur_line->str[pos[1]] == '\0') {
+                    goto_endline(cur_line, pos[0], HLINES);
                 }
                 else {
                     move(pos[0], pos[1] - 1);
                 }
                 break;
             case KEY_RIGHT: //Right key pressed at end of line
-                if (pos[1] == HLINES - 1) {
+                if (pos[1] == strlen(cur_line->str) || pos[1] == HLINES - 1) {
                     move(pos[0] + 1, 0);
                     cur_lineno = INCREMENT(cur_lineno, new_sz);
                 }
                 else { //TODO: handle TABs
-                    cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
                     if (cur_line->str[pos[1] + 1] == '\t') move(pos[0], pos[1] + 4); //TAB handle
                     else move(pos[0], pos[1] + 1);
                 }
                 break;
             case KEY_END:
                 cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
-                print_control_line(cur_line->str); //DEBUG
-                move(pos[0], strlen(cur_line->str) >= HLINES ? HLINES - 1 : strlen(cur_line->str));
+                //print_control_line(cur_line->str); //DEBUG
+                goto_endline(cur_line, pos[0], HLINES);
                 break;
             case KEY_HOME:
                 move(pos[0], 0);
@@ -112,7 +115,6 @@ int main(int argc, char *argv[])
             /*Backspace*/
             case 127:
                 if (pos[1] > 0) {
-                    cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
                     line_pop(cur_line, pos[1] - 1, 1, HLINES);
                     scr_out(cur_page, VLINES);
                     move(pos[0], pos[1] - 1);
@@ -332,6 +334,13 @@ line_t *list_rewind(line_t *head, int how_many)
     }
 
     return head;
+}
+
+
+void goto_endline(line_t *line, int y, int max_len)
+{
+    int len = strlen(line->str);
+    move(y, len >= max_len ? max_len - 1 : len);
 }
 
 
