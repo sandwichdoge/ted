@@ -110,8 +110,8 @@ void list_remove(node_t *head)
 void print_list(node_t *head)
 {
     while (head != NULL) {
-        //printf(">%s[%d]\n", head->str, head->str[81]);
-        printf(">%s\n", head->str);
+        printf(">%s[%d]\n", head->str, head->str[81]);
+        //printf(">%s\n", head->str);
         head = head->next;
     }
 }

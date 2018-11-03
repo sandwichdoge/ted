@@ -11,6 +11,9 @@
 
 typedef node_t line_t;
 
+WINDOW *textw;
+WINDOW *menuw;
+
 char** generate_terminal_friendly_array(char **arr, int sz, int *new_size, int max_len);
 int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_size, int max_len);
 int list_write_to_file(line_t *head, char *path, int flg_pos);
@@ -24,3 +27,5 @@ void line_pop(line_t *head, int pos, int n, const int max_len);
 int is_alpha(int c);
 int is_acceptable_ascii_symbols(int c);
 void init_control_line();
+void print_control_line(char *str);
+void goto_endline(line_t *line, int y, int max_len);

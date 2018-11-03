@@ -4,8 +4,6 @@
 #include <string.h>
 #include "ted.h"
 
-WINDOW *textw;
-WINDOW *menuw;
 
 int main(int argc, char *argv[])
 {
@@ -42,7 +40,7 @@ int main(int argc, char *argv[])
 
 
     /*Print first page of document to screen*/
-    textw = newwin(VLINES - 1, HLINES - 1, 0, 0);
+    textw = newwin(VLINES, HLINES, 0, 0);
     next_page = scr_out(doc_begin, VLINES);
     move(0, 0);
     refresh();
@@ -50,11 +48,11 @@ int main(int argc, char *argv[])
     /*Draw control line*/
     init_control_line();
     
-
     /*Handle keypresses*/
     while (1) {
         int k = getch();
         update_pos(pos);
+        cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
 
         /*FUNCTION KEYS*/
         if (k == KEY_F(2)) break;
@@ -84,26 +82,31 @@ int main(int argc, char *argv[])
                 cur_lineno = DECREMENT(cur_lineno);
                 break;
             case KEY_LEFT:
-                if (pos[1] == 0) { //Left key pressed at start of line
-                    move(cur_lineno > 0 ? pos[0] - 1 : pos[0], cur_lineno > 0 ? HLINES - 1 : pos[1]); //Do nothing if it's 1st line of doc
+                if (pos[1] == 0 && cur_lineno > 0) { //Left key pressed at start of line
+                    goto_endline(cur_line->prev, pos[0] - 1, HLINES); //Set cursor to end of previous line
                     cur_lineno = DECREMENT(cur_lineno);
+                }
+                else if (cur_line->str[pos[1]] == '\0') {
+                    goto_endline(cur_line, pos[0], HLINES);
                 }
                 else {
                     move(pos[0], pos[1] - 1);
                 }
                 break;
             case KEY_RIGHT: //Right key pressed at end of line
-                if (pos[1] == HLINES - 1) {
+                if (pos[1] == strlen(cur_line->str) || pos[1] == HLINES - 1) {
                     move(pos[0] + 1, 0);
                     cur_lineno = INCREMENT(cur_lineno, new_sz);
                 }
-                else {
-                    move(pos[0], pos[1] + 1);
+                else { //TODO: handle TABs
+                    if (cur_line->str[pos[1] + 1] == '\t') move(pos[0], pos[1] + 4); //TAB handle
+                    else move(pos[0], pos[1] + 1);
                 }
                 break;
             case KEY_END:
                 cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
-                move(pos[0], strlen(cur_line->str) >= HLINES ? HLINES - 1 : strlen(cur_line->str));
+                //print_control_line(cur_line->str); //DEBUG
+                goto_endline(cur_line, pos[0], HLINES);
                 break;
             case KEY_HOME:
                 move(pos[0], 0);
@@ -112,9 +115,8 @@ int main(int argc, char *argv[])
             /*Backspace*/
             case 127:
                 if (pos[1] > 0) {
-                    cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
                     line_pop(cur_line, pos[1] - 1, 1, HLINES);
-                    scr_out(cur_page, HLINES);
+                    scr_out(cur_page, VLINES);
                     move(pos[0], pos[1] - 1);
                 }
                 else { //Backspace is pressed at start of line
@@ -254,7 +256,7 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
             
             /*Give it a nice linebreak formatting (avoid breaking a word in half)*/
             formatted_len = strlen(arr[i] + cur);
-            if ((arr[i] + cur)[max_len - 1] != '\0') { //if line is too long
+            if (strlen(arr[i] + cur) > max_len) { //if line is too long
                 for (formatted_len = max_len; formatted_len > 0; formatted_len--) {
                     if ((arr[i] + cur)[formatted_len] == ' ') break;
                 }
@@ -335,18 +337,41 @@ line_t *list_rewind(line_t *head, int how_many)
 }
 
 
-void init_control_line()
+void goto_endline(line_t *line, int y, int max_len)
 {
-    menuw = newwin(1, HLINES-1, VLINES, 0);
-    box(menuw, 0, 0);
+    int len = strlen(line->str);
+    move(y, len >= max_len ? max_len - 1 : len);
+}
+
+
+void print_control_line(char *str)
+{
+    wmove(menuw, 0, 1);
+    wclrtoeol(menuw);
+    mvwprintw(menuw, 0, 1, str);
+    wrefresh(menuw);
+
+}
+
+
+void reset_control_line()
+{
     wattron(menuw, A_STANDOUT);
-    mvwprintw(menuw, 0, 0, "CTRL+S:Save");
+    mvwprintw(menuw, 0, 1, "CTRL+S:Save");
     wattroff(menuw, A_STANDOUT);
-    mvwprintw(menuw, 0, strlen("CTRL+S:Save"), "    ");
+    mvwprintw(menuw, 0, 1 + strlen("CTRL+S:Save"), "    ");
     wattron(menuw, A_STANDOUT);
-    mvwprintw(menuw, 0, strlen("CTRL+S:Save    "), "F2:Quit");
+    mvwprintw(menuw, 0, 1 + strlen("CTRL+S:Save    "), "F2:Quit");
     wattroff(menuw, A_STANDOUT);
     wrefresh(menuw);
+}
+
+
+void init_control_line()
+{
+    menuw = newwin(1, HLINES, VLINES, 0);
+    box(menuw, 0, 0);
+    reset_control_line();
 }
 
 
