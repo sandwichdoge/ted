@@ -33,6 +33,9 @@ int main(int argc, char *argv[])
     line_t *cur_line = doc_begin;
     int cur_lineno = 0;
 
+    /*Declare flags*/
+    int tab_removed = 0;
+
     /*Initialize screen mode*/
     initscr();
     noecho();
@@ -129,9 +132,13 @@ int main(int argc, char *argv[])
             case KEY_BACKSPACE:
             case 127:
                 if (scrpos[1] > 0) {
-                    line_pop(cur_line, scrpos[1] - 1, 1, HLINES);
+                    if (cur_line->str[mempos[1] - 1] == '\t') tab_removed = 1;
+                    else tab_removed = 0;    
+                    line_pop(cur_line, mempos[1] - 1, 1, HLINES);
                     scr_out(cur_page, VLINES);
-                    move(scrpos[0], scrpos[1] - 1);
+
+                    if (tab_removed == 1) move(mempos[0], conv_to_scrpos(mempos[1] - 1, cur_line));
+                    else move(scrpos[0], scrpos[1] - 1);
                 }
                 else { //Backspace is pressed at start of line
 
