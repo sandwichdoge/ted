@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
     /*These variables must be kept track of at all times*/
     line_t *next_page; //Next unprinted line in list
     line_t *cur_page = doc_begin; //First line shown on the screen
-    int pos[2] = {0, 0}; //Current pos of cursor
+    int scrpos[2] = {0, 0}; //Current pos of cursor
+    int mempos[2] = {0, 0}; //Current pos of mem
     line_t *cur_line = doc_begin;
     int cur_lineno = 0;
 
@@ -39,20 +40,27 @@ int main(int argc, char *argv[])
     raw();
 
 
+    /*Draw control line*/
+    init_control_line();
+
+
     /*Print first page of document to screen*/
     textw = newwin(VLINES, HLINES, 0, 0);
     next_page = scr_out(doc_begin, VLINES);
     move(0, 0);
-    refresh();
+    wrefresh(textw);
 
-    /*Draw control line*/
-    init_control_line();
     
+    char buf[16];
     /*Handle keypresses*/
     while (1) {
         int k = getch();
-        update_pos(pos);
-        cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+        update_pos(scrpos);
+        cur_line = list_traverse(cur_page, 1, scrpos[0]); //Traverse forward until lineno is met.
+        update_mempos(mempos, scrpos, cur_line);
+        sprintf(buf, "%d", mempos[1]);
+        strcat(buf, ":mempos");
+        print_control_line(buf);
 
         /*FUNCTION KEYS*/
         if (k == KEY_F(2)) break;
@@ -60,69 +68,73 @@ int main(int argc, char *argv[])
         switch (k) {
             /*NAVIGATION KEYS*/
             case KEY_DOWN:
-                if (pos[0] == VLINES - 1) {
+                if (scrpos[0] == VLINES - 1) { //If cursor is at last line, advance page
                     cur_page = next_page;
                     next_page = scr_out(next_page, VLINES);
-                    move(0, pos[1]);
+                    move(0, scrpos[1]);
                 }
                 else if (cur_lineno < new_sz) {
-                    move(pos[0] + 1, pos[1]);
+                    move(scrpos[0] + 1, scrpos[1]);
                 }
                 cur_lineno = INCREMENT(cur_lineno, new_sz);
                 break;
             case KEY_UP:
-                if (pos[0] == 0 && cur_page != doc_begin) {
+                if (scrpos[0] == 0 && cur_page != doc_begin) { //If cursor is at line 0 && not at begin of doc, rewind page
                     cur_page = list_rewind(cur_page, VLINES);
                     next_page = scr_out(cur_page, VLINES);
-                    move(VLINES - 1, pos[1]);
+                    move(VLINES - 1, scrpos[1]);
                 }
                 else {
-                    move(pos[0] - 1, pos[1]);
+                    move(scrpos[0] - 1, scrpos[1]);
                 }
                 cur_lineno = DECREMENT(cur_lineno);
                 break;
-            case KEY_LEFT:
-                if (pos[1] == 0 && cur_lineno > 0) { //Left key pressed at start of line
-                    goto_endline(cur_line->prev, pos[0] - 1, HLINES); //Set cursor to end of previous line
+            case KEY_LEFT: //TODO: handle left keypress
+                if (scrpos[1] == 0 && cur_lineno > 0) { //Left key pressed at start of line
+                    goto_endline(cur_line->prev, scrpos[0] - 1, HLINES); //Set cursor to end of previous line
                     cur_lineno = DECREMENT(cur_lineno);
                 }
-                else if (cur_line->str[pos[1]] == '\0') {
-                    goto_endline(cur_line, pos[0], HLINES);
+                else if (cur_line->str[mempos[1] - 1] == '\0') { //Cursor is outside of line bound
+                    goto_endline(cur_line, scrpos[0], HLINES);
+                }
+                else if (cur_line->str[mempos[1] - 1] == '\t') { //go to TAB begin
+                    move(scrpos[0], conv_to_scrpos(mempos[1] - 1, cur_line)); //lowerbound()
                 }
                 else {
-                    move(pos[0], pos[1] - 1);
+                    move(scrpos[0], scrpos[1] - 1);
                 }
                 break;
-            case KEY_RIGHT: //Right key pressed at end of line
-                if (pos[1] == strlen(cur_line->str) || pos[1] == HLINES - 1) {
-                    move(pos[0] + 1, 0);
+            case KEY_RIGHT: 
+                if (scrpos[1] == scr_len(cur_line) || scrpos[1] == HLINES - 1) { //Right key pressed at end of line
+                    move(scrpos[0] + 1, 0);
                     cur_lineno = INCREMENT(cur_lineno, new_sz);
                 }
-                else { //TODO: handle TABs
-                    if (cur_line->str[pos[1] + 1] == '\t') move(pos[0], pos[1] + 4); //TAB handle
-                    else move(pos[0], pos[1] + 1);
+                else if (cur_line->str[mempos[1]] == '\t') { //handle TABs
+                    move(scrpos[0], upperbound(scrpos[1] + 1, 8));
                 }
+                else move(scrpos[0], scrpos[1] + 1);
                 break;
             case KEY_END:
-                cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
-                //print_control_line(cur_line->str); //DEBUG
-                goto_endline(cur_line, pos[0], HLINES);
+                cur_line = list_traverse(cur_page, 1, scrpos[0]); //Traverse forward until lineno is met.
+                goto_endline(cur_line, scrpos[0], HLINES);
                 break;
             case KEY_HOME:
-                move(pos[0], 0);
+                move(scrpos[0], 0);
                 break;
 
             /*Backspace*/
+            case KEY_BACKSPACE:
             case 127:
-                if (pos[1] > 0) {
-                    line_pop(cur_line, pos[1] - 1, 1, HLINES);
+                if (scrpos[1] > 0) {
+                    line_pop(cur_line, scrpos[1] - 1, 1, HLINES);
                     scr_out(cur_page, VLINES);
-                    move(pos[0], pos[1] - 1);
+                    move(scrpos[0], scrpos[1] - 1);
                 }
                 else { //Backspace is pressed at start of line
 
                 }
                 break;
+
 
             /*Key combo*/
             case 19: //CTRL+S - Save file
@@ -131,25 +143,25 @@ int main(int argc, char *argv[])
         }
 
         /*INPUT KEYS (a-z, A-Z, 0-9, etc. and non-special symbols)*/
-        /*Insert a char at cursor position, pos[0] is the line no and pos[1] is the char no.*/
+        /*Insert a char at cursor position, scrpos[0] is the line no and scrpos[1] is the char no.*/
         /*Only supports ASCII characters for now*/
         if (is_alpha(k) || is_acceptable_ascii_symbols(k)) {
-            cur_line = list_traverse(cur_page, 1, pos[0]); //Traverse forward until lineno is met.
+            cur_line = list_traverse(cur_page, 1, scrpos[0]); //Traverse forward until lineno is met.
             /*Insert string into cur_line*/
             if (strlen(cur_line->str) < HLINES) { //If current line's length hasnt reached limit, insert typed key
-                char_insert(cur_line->str, pos[1], k);
-                print_line(cur_line->str, pos[0]); //Display modified line on screen
-                move(pos[0], pos[1]+1 > HLINES ? HLINES : pos[1] + 1);
+                char_insert(cur_line->str, scrpos[1], k);
+                print_line(cur_line->str, scrpos[0]); //Display modified line on screen
+                move(scrpos[0], scrpos[1]+1 > HLINES ? HLINES : scrpos[1] + 1);
             }
             else { //If line has reached len limit
                 /*Push list by 1 char to make space at cursor pos*/
-                line_push(cur_line, pos[1], 1, HLINES);
-                memcpy(cur_line->str + pos[1], (char*)&k, 1);
+                line_push(cur_line, scrpos[1], 1, HLINES);
+                memcpy(cur_line->str + scrpos[1], (char*)&k, 1);
 
                 /*Print out page and move cursor appropriately*/
                 next_page = scr_out(cur_page, VLINES);
-                if (pos[1] + 1 >= HLINES) move(pos[0] + 1, 0);
-                else move(pos[0], pos[1]+1);
+                if (scrpos[1] + 1 >= HLINES) move(scrpos[0] + 1, 0);
+                else move(scrpos[0], scrpos[1]+1);
             }
         }
 
@@ -320,10 +332,10 @@ int print_line(char *data, int L)
 }
 
 
-void update_pos(int pos[])
+void update_pos(int scrpos[])
 {
-    pos[0] = getcury(stdscr);
-    pos[1] = getcurx(stdscr);
+    scrpos[0] = getcury(stdscr);
+    scrpos[1] = getcurx(stdscr);
 }
 
 
@@ -339,7 +351,7 @@ line_t *list_rewind(line_t *head, int how_many)
 
 void goto_endline(line_t *line, int y, int max_len)
 {
-    int len = strlen(line->str);
+    int len = scr_len(line);
     move(y, len >= max_len ? max_len - 1 : len);
 }
 
@@ -372,6 +384,63 @@ void init_control_line()
     menuw = newwin(1, HLINES, VLINES, 0);
     box(menuw, 0, 0);
     reset_control_line();
+}
+
+
+/*Ceiling n to the nearest upper multiplication of div*/
+int upperbound(int n, int divi)
+{
+    if (n % divi == 0) return n;
+    int res = n / divi;
+    return divi * (res+1);
+}
+
+
+/*Convert scrpos to mempos. Handle special characters that take up more than 1 space*/
+/*a____bc scr-input:5, mem-output:1*/
+void update_mempos(int mempos[], int scrpos[], line_t *cur_line)
+{
+    mempos[0] = scrpos[0]; //y coord
+    mempos[1] = 0;
+    int scr = 0;
+    for (int i = 0; scr < scrpos[1] && cur_line->str[i]; i++) { //this part could look prettier but this expression is more logically sound
+        if (cur_line->str[i] == '\t') {
+            scr = upperbound(scr + 1, 8);
+        }
+        else {
+            scr++;
+        }
+        mempos[1]++;
+    }
+
+}
+
+
+/*Get number of chars needed to print the line to screen, to handle TABs*/
+int scr_len(line_t *line)
+{
+    int ret = 0;
+   for (int i = 0; line->str[i]; i++) {
+        if (line->str[i] == '\t') ret = upperbound(ret + 1, 8);
+        else ret++;
+    }
+
+    return ret;
+}
+
+
+int conv_to_scrpos(int memposx, line_t *line)
+{
+    int ret = 0;
+    for (int i = 0; i < memposx; i++) {
+        if (line->str[i] == '\t') ret = upperbound(ret + 1, 8);
+        else ret++;
+    }
+
+    char buf[16];
+    sprintf(buf, "%d", ret);
+    print_control_line(buf);
+    return ret;
 }
 
 
