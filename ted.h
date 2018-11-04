@@ -1,6 +1,7 @@
 #include "linked-list.h"
 #include "fileops/fileops.h"
 #include "str-utils/str-utils.h"
+#include <ncurses.h>
 
 #define HLINES 80
 #define VLINES 23
@@ -20,7 +21,7 @@ int list_write_to_file(line_t *head, char *path, int flg_pos);
 void scr_clear();
 line_t* scr_out(line_t *head, int how_many);
 int print_line(char *data, int L);
-void update_pos(int pos[]);
+void update_pos(int scrpos[]);
 line_t* list_rewind(line_t *head, int how_many);
 void line_push(line_t *head, int pos, int n, int max_len);
 void line_pop(line_t *head, int pos, int n, const int max_len);
@@ -29,3 +30,8 @@ int is_acceptable_ascii_symbols(int c);
 void init_control_line();
 void print_control_line(char *str);
 void goto_endline(line_t *line, int y, int max_len);
+void update_mempos(int mempos[], int scrpos[], line_t *cur_line);
+int scr_len(char *str);
+int upperbound(int n, int divi);
+int conv_to_scrpos(int memposx, line_t *line);
+int conv_to_mempos(int x, char *str);
