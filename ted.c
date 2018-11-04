@@ -152,15 +152,15 @@ int main(int argc, char *argv[])
         if (is_alpha(k) || is_acceptable_ascii_symbols(k)) {
             cur_line = list_traverse(cur_page, 1, scrpos[0]); //Traverse forward until lineno is met.
             /*Insert string into cur_line*/
-            if (strlen(cur_line->str) < HLINES) { //If current line's length hasnt reached limit, insert typed key
-                char_insert(cur_line->str, scrpos[1], k);
+            if (scr_len(cur_line) < HLINES) { //If current line's length hasn't reached limit, insert typed key
+                char_insert(cur_line->str, mempos[1], k);
                 print_line(cur_line->str, scrpos[0]); //Display modified line on screen
                 move(scrpos[0], scrpos[1]+1 > HLINES ? HLINES : scrpos[1] + 1);
             }
             else { //If line has reached len limit
                 /*Push list by 1 char to make space at cursor pos*/
-                line_push(cur_line, scrpos[1], 1, HLINES);
-                memcpy(cur_line->str + scrpos[1], (char*)&k, 1);
+                line_push(cur_line, mempos[1], 1, HLINES);
+                memcpy(cur_line->str + mempos[1], (char*)&k, 1);
 
                 /*Print out page and move cursor appropriately*/
                 next_page = scr_out(cur_page, VLINES);
@@ -211,22 +211,24 @@ void line_pop(line_t *head, int pos, int n, const int max_len)
 }
 
 
+//TODO: take TAB into consideration
 /*Make space at pos to insert string later*/
 void line_push(line_t *head, int pos, int n, const int max_len)
 {
     char *str = NULL, *newline = NULL;
     char *last_word = calloc(n + 1, 1);
-    int len = strlen(head->str);
+    int len = scr_len(head);
     int flg = 0;
 
     if (len + n >= max_len) {
-        memcpy(last_word, head->str + max_len - n, n);
-        head->str[max_len - n] = '\0'; //head->str is trimmed now
+        memcpy(last_word, head->str + (strlen(head->str) - n), n);
+        head->str[strlen(head->str) - n] = '\0'; //head->str is trimmed now
         if (head->str[max_len + 1] == 1) flg = 1; //PRESERVE REAL LINEBREAK
         head->str[max_len + 1] = 0; //Mark current line as fake because it's been pushed to next line
+
         if (flg == 1) { //If fake line, proceed to line_push() normally, otherwise make a new real line
             newline = calloc(max_len + 1, 1);
-            list_add_next(head, newline);
+            list_add_next(head, newline); //Real linebreak, therefore make a new line
             head->next->str[max_len + 1] = 1; //PRESERVE REAL LINEBREAK
         }
 
@@ -234,16 +236,17 @@ void line_push(line_t *head, int pos, int n, const int max_len)
         memcpy(head->next->str, last_word, strlen(last_word));
     }
 
-    char *tail = malloc(strlen(&head->str[pos]) + 1); //Next: push tail by n
+    /*Push tail by n chars*/
+    char *tail = malloc(strlen(&head->str[pos]) + 1);
     strcpy(tail, &head->str[pos]);
     memcpy((&head->str[pos + n]), tail, strlen(tail));
 
-    free(tail);
-    tail = NULL;
-    free(last_word);
+    free(tail); tail = NULL;
+    free(last_word); last_word = NULL;
 }
 
 
+//TODO: take TAB into consideration
 /*(maxlen+2)th byte [or 0-based index: maxlen+1] will represent if it's a real LF (\n) or a generated line (broken down for viewing)
  *0: fake LF, 1: real LF
  *All lines are maxlen + 2 bytes long (NULLTERM then LFflag)
