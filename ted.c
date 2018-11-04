@@ -90,15 +90,18 @@ int main(int argc, char *argv[])
                 cur_lineno = DECREMENT(cur_lineno);
                 break;
             case KEY_LEFT: //TODO: handle left keypress
-                if (scrpos[1] == 0 && cur_lineno > 0) { //Left key pressed at start of line
-                    goto_endline(cur_line->prev, scrpos[0] - 1, HLINES); //Set cursor to end of previous line
-                    cur_lineno = DECREMENT(cur_lineno);
+                if (scrpos[1] == 0) { //Left key pressed at start of line
+                    if (cur_lineno > 0) {
+                        goto_endline(cur_line->prev, scrpos[0] - 1, HLINES); //Set cursor to end of previous line
+                        cur_lineno = DECREMENT(cur_lineno);
+                    }
+                    else move(0, 0); //If start of doc then do nothing
                 }
-                else if (cur_line->str[mempos[1] - 1] == '\0') { //Cursor is outside of line bound
+                else if (scrpos[1] > scr_len(cur_line)) { //Cursor is outside of line bound
                     goto_endline(cur_line, scrpos[0], HLINES);
                 }
-                else if (cur_line->str[mempos[1] - 1] == '\t') { //go to TAB begin
-                    move(scrpos[0], conv_to_scrpos(mempos[1] - 1, cur_line)); //lowerbound()
+                else if (cur_line->str[mempos[1] - 1] == '\t' || cur_line->str[mempos[1]] == '\t') { 
+                    move(scrpos[0], conv_to_scrpos(mempos[1] - 1, cur_line)); //Go to TAB begin
                 }
                 else {
                     move(scrpos[0], scrpos[1] - 1);
@@ -142,6 +145,7 @@ int main(int argc, char *argv[])
                 break;
         }
 
+        //TODO: handle TAB insertion
         /*INPUT KEYS (a-z, A-Z, 0-9, etc. and non-special symbols)*/
         /*Insert a char at cursor position, scrpos[0] is the line no and scrpos[1] is the char no.*/
         /*Only supports ASCII characters for now*/
@@ -403,13 +407,14 @@ void update_mempos(int mempos[], int scrpos[], line_t *cur_line)
     mempos[0] = scrpos[0]; //y coord
     mempos[1] = 0;
     int scr = 0;
-    for (int i = 0; scr < scrpos[1] && cur_line->str[i]; i++) { //this part could look prettier but this expression is more logically sound
+    for (int i = 0; cur_line->str[i]; i++) { //this part could look prettier but this expression is more logically sound
         if (cur_line->str[i] == '\t') {
             scr = upperbound(scr + 1, 8);
         }
         else {
             scr++;
         }
+        if (scr > scrpos[1]) break;
         mempos[1]++;
     }
 
@@ -436,10 +441,10 @@ int conv_to_scrpos(int memposx, line_t *line)
         if (line->str[i] == '\t') ret = upperbound(ret + 1, 8);
         else ret++;
     }
-
+    /*
     char buf[16];
     sprintf(buf, "%d", ret);
-    print_control_line(buf);
+    print_control_line(buf);*/
     return ret;
 }
 
