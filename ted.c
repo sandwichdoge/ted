@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
 
 	/*Declare flags*/
 	int tab_removed = 0;
+	char *tail;
 
 	/*Initialize screen mode*/
 	initscr();
@@ -126,7 +127,18 @@ int main(int argc, char *argv[])
 	case KEY_HOME:
 		move(scrpos[0], 0);
 		break;
+	/*Enter*/
+	case KEY_ENTER:
+	case '\n':
+		tail = malloc(HLINES + 1);
+		strcpy(tail, cur_line->str + mempos[1]);
+		list_add_next(cur_line, tail);
+		*(cur_line->str + mempos[1]) = '\0';
+		*(cur_line->str + LF_FLAG) = 1;
 
+		scr_out(cur_page, VLINES);
+		move(scrpos[0] + 1, 0);
+		break;
 	/*Backspace*/
 	case KEY_BACKSPACE:
 	case 127:
@@ -162,23 +174,25 @@ int main(int argc, char *argv[])
 		/*Insert string into cur_line*/
 		if (scr_len(cur_line->str) < HLINES) { // If current line's length hasn't
 												// reached limit, insert typed key
-		char_insert(cur_line->str, mempos[1], k);
-		print_line(cur_line->str, scrpos[0]); // Display modified line on screen
-		move(scrpos[0], scrpos[1] + 1 > HLINES ? HLINES : scrpos[1] + 1);
-		} else { // If line has reached len limit
-		/*Push list by 1 char to make space at cursor pos*/
-		line_push(cur_line, mempos[1], 1, HLINES);
-		memcpy(cur_line->str + mempos[1], (char *)&k, 1);
+			char_insert(cur_line->str, mempos[1], k);
+			print_line(cur_line->str, scrpos[0]); // Display modified line on screen
+			move(scrpos[0], scrpos[1] + 1 > HLINES ? HLINES : scrpos[1] + 1);
+		} 
+		else { // If line has reached len limit
+			/*Push list by 1 char to make space at cursor pos*/
+			line_push(cur_line, mempos[1], 1, HLINES);
+			memcpy(cur_line->str + mempos[1], (char *)&k, 1);
 
-		/*Print out page and move cursor appropriately*/
-		next_page = scr_out(cur_page, VLINES);
-		if (scrpos[1] + 1 >= HLINES)
-			move(scrpos[0] + 1, 0);
-		else
-			move(scrpos[0], scrpos[1] + 1);
+			/*Print out page and move cursor appropriately*/
+			next_page = scr_out(cur_page, VLINES);
+			if (scrpos[1] + 1 >= HLINES)
+				move(scrpos[0] + 1, 0);
+			else
+				move(scrpos[0], scrpos[1] + 1);
 		}
 	}
-	}
+
+	} //Endswitch
 
 	free_str_array(lines, line_count);
 	endwin();
