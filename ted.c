@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
 	int cur_lineno = 0;
 
 	/*Declare flags*/
+	int old_lf_state;
 	int tab_removed = 0;
 	char *tail;
 
@@ -130,8 +131,10 @@ int main(int argc, char *argv[])
 	/*Enter*/
 	case KEY_ENTER:
 	case '\n':
-		tail = malloc(HLINES + 1);
+		tail = malloc(HLINES + 2);
+		old_lf_state = cur_line->str[LF_FLAG];
 		strcpy(tail, cur_line->str + mempos[1]);
+		tail[LF_FLAG] = old_lf_state;
 		list_add_next(cur_line, tail);
 		*(cur_line->str + mempos[1]) = '\0';
 		*(cur_line->str + LF_FLAG) = 1;
@@ -153,8 +156,14 @@ int main(int argc, char *argv[])
 				move(mempos[0], conv_to_scrpos(mempos[1] - 1, cur_line->str));
 			else
 				move(scrpos[0], scrpos[1] - 1);
-		} else { // TODO: Backspace is pressed at start of line
-			move(scrpos[0], 0);
+		} 
+		else { // TODO: Backspace is pressed at start of line
+			if (cur_line->prev->str[LF_FLAG] == 1) { //previous linebreak is real
+				cur_line->prev->str[LF_FLAG] = 0;
+				line_pop(cur_line->prev, strlen(cur_line->prev->str) - 1, 1, HLINES);
+			}
+			scr_out(cur_page, VLINES);
+			goto_endline(cur_line->prev, scrpos[0] - 1, HLINES);
 		}
 		break;
 
