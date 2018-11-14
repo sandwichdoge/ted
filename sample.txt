@@ -1,8 +1,9 @@
 I guess you can't wait any more to see some action. Back to our odyssey of curses functions. Now that curses is initialized, let's interact with 
 world.
 
-0123456789012345678901234567890123456789012345678901234567890123456789012345	6789abcdefghijklmn
+
 There are three classes of functions which you can use to do output on screen.
+
 
     addch() class: Print single character with attributes
 
@@ -33,3 +34,4 @@ To crush the rebellion once and for all, the EMPIRE is constructing a sinister n
 
 The crawl used in the film itself was a revised version by Brian DePalma and then-film critic Jay C.
 a21321
+

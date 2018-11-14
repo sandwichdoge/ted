@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <unistd.h>
 
 int main(int argc, char *argv[]) 
 {
@@ -13,8 +13,8 @@ int main(int argc, char *argv[])
 	int line_count = 0;
 	char **lines = file_read_to_array(file, &line_count);
 	if (line_count < 0) {
-	printf("Cannot open file %s.\n", file);
-	return -1;
+		printf("Cannot open file %s.\n", file);
+		return -1;
 	}
 
 	line_t head;
@@ -36,7 +36,9 @@ int main(int argc, char *argv[])
 	int cur_lineno = 0;
 
 	/*Declare flags*/
+	int old_lf_state;
 	int tab_removed = 0;
+	char *tail;
 
 	/*Initialize screen mode*/
 	initscr();
@@ -44,27 +46,29 @@ int main(int argc, char *argv[])
 	keypad(stdscr, 1);
 	raw();
 
-	/*Draw control line*/
-	init_control_line();
-
 	/*Print first page of document to screen*/
 	textw = newwin(VLINES, HLINES, 0, 0);
 	next_page = scr_out(doc_begin, VLINES);
-	move(0, 0);
-	wrefresh(textw);
+	refresh();
 
-	char buf[16];
+	//char buf[16];
+	/*Draw control line*/
+	init_control_line();
+
+	move(0, 0);
 
 	/*Handle keypresses*/
 	while (1) {
 	int k = getch();
+	
 	update_pos(scrpos);
 	cur_line = list_traverse(cur_page, 1, scrpos[0]); // Traverse forward until lineno is met.
 	update_mempos(mempos, scrpos, cur_line);
 
+	/*
 	sprintf(buf, "%d", mempos[1]);
 	strcat(buf, ":mempos");
-	print_control_line(buf);
+	print_control_line(buf);*/
 
 	/*FUNCTION KEYS*/
 	if (k == KEY_F(2))
@@ -74,38 +78,38 @@ int main(int argc, char *argv[])
 	/*NAVIGATION KEYS*/
 	case KEY_DOWN:
 		if (scrpos[0] == VLINES - 1) { // If cursor is at last line, advance page
-		cur_page = next_page;
-		next_page = scr_out(next_page, VLINES);
-		move(0, scrpos[1]);
+			cur_page = next_page;
+			next_page = scr_out(next_page, VLINES);
+			move(0, scrpos[1]);
 		} else if (cur_lineno < new_sz) {
-		move(scrpos[0] + 1, scrpos[1]);
+			move(scrpos[0] + 1, scrpos[1]);
 		}
 		cur_lineno = INCREMENT(cur_lineno, new_sz);
 		break;
 	case KEY_UP:
 		if (scrpos[0] == 0 && cur_page != doc_begin) { // If cursor is at line 0 && not at begin of doc, rewind page
-		cur_page = list_rewind(cur_page, VLINES);
-		next_page = scr_out(cur_page, VLINES);
-		move(VLINES - 1, scrpos[1]);
+			cur_page = list_rewind(cur_page, VLINES);
+			next_page = scr_out(cur_page, VLINES);
+			move(VLINES - 1, scrpos[1]);
 		} else {
-		move(scrpos[0] - 1, scrpos[1]);
+			move(scrpos[0] - 1, scrpos[1]);
 		}
 		cur_lineno = DECREMENT(cur_lineno);
 		break;
-	case KEY_LEFT:          // TODO: handle left keypress
+	case KEY_LEFT:  // TODO: handle left keypress
 		if (scrpos[1] == 0) { // Left key pressed at start of line
-		if (cur_lineno > 0) {
-			goto_endline(cur_line->prev, scrpos[0] - 1, HLINES); // Set cursor to end of previous line
-			cur_lineno = DECREMENT(cur_lineno);
-		} else {
-			move(0, 0); // If start of doc then do nothing
-		}
+			if (cur_lineno > 0) {
+				if (goto_endline(cur_line->prev, scrpos[0] - 1, HLINES) == 0) // Successfully set cursor to end of previous line
+					cur_lineno = DECREMENT(cur_lineno);
+			} else {
+				move(0, 0);
+			}
 		} else if (scrpos[1] > scr_len(cur_line->str)) { // Cursor is outside of line bound
-		goto_endline(cur_line, scrpos[0], HLINES);
+			goto_endline(cur_line, scrpos[0], HLINES);
 		} else if (cur_line->str[mempos[1] - 1] == '\t' || cur_line->str[mempos[1]] == '\t') {
-		move(scrpos[0], conv_to_scrpos(mempos[1] - 1, cur_line)); // Go to TAB begin
+			move(scrpos[0], conv_to_scrpos(mempos[1] - 1, cur_line->str)); // Go to TAB begin
 		} else {
-		move(scrpos[0], scrpos[1] - 1);
+			move(scrpos[0], scrpos[1] - 1);
 		}
 		break;
 	case KEY_RIGHT:
@@ -124,7 +128,20 @@ int main(int argc, char *argv[])
 	case KEY_HOME:
 		move(scrpos[0], 0);
 		break;
+	/*Enter*/
+	case KEY_ENTER:
+	case '\n':
+		tail = malloc(HLINES + 2);
+		old_lf_state = cur_line->str[LF_FLAG];
+		strcpy(tail, cur_line->str + mempos[1]);
+		tail[LF_FLAG] = old_lf_state;
+		list_add_next(cur_line, tail);
+		*(cur_line->str + mempos[1]) = '\0';
+		*(cur_line->str + LF_FLAG) = 1;
 
+		scr_out(cur_page, VLINES);
+		move(scrpos[0] + 1, 0);
+		break;
 	/*Backspace*/
 	case KEY_BACKSPACE:
 	case 127:
@@ -136,11 +153,17 @@ int main(int argc, char *argv[])
 			scr_out(cur_page, VLINES);
 
 			if (tab_removed == 1)
-				move(mempos[0], conv_to_scrpos(mempos[1] - 1, cur_line));
+				move(mempos[0], conv_to_scrpos(mempos[1] - 1, cur_line->str));
 			else
 				move(scrpos[0], scrpos[1] - 1);
-		} else { // TODO: Backspace is pressed at start of line
-			move(scrpos[0], 0);
+		} 
+		else { // TODO: Backspace is pressed at start of line
+			if (cur_line->prev->str[LF_FLAG] == 1) { //previous linebreak is real
+				cur_line->prev->str[LF_FLAG] = 0;
+				line_pop(cur_line->prev, strlen(cur_line->prev->str) - 1, 1, HLINES);
+			}
+			scr_out(cur_page, VLINES);
+			goto_endline(cur_line->prev, scrpos[0] - 1, HLINES);
 		}
 		break;
 
@@ -160,23 +183,25 @@ int main(int argc, char *argv[])
 		/*Insert string into cur_line*/
 		if (scr_len(cur_line->str) < HLINES) { // If current line's length hasn't
 												// reached limit, insert typed key
-		char_insert(cur_line->str, mempos[1], k);
-		print_line(cur_line->str, scrpos[0]); // Display modified line on screen
-		move(scrpos[0], scrpos[1] + 1 > HLINES ? HLINES : scrpos[1] + 1);
-		} else { // If line has reached len limit
-		/*Push list by 1 char to make space at cursor pos*/
-		line_push(cur_line, mempos[1], 1, HLINES);
-		memcpy(cur_line->str + mempos[1], (char *)&k, 1);
+			char_insert(cur_line->str, mempos[1], k);
+			print_line(cur_line->str, scrpos[0]); // Display modified line on screen
+			move(scrpos[0], scrpos[1] + 1 > HLINES ? HLINES : scrpos[1] + 1);
+		} 
+		else { // If line has reached len limit
+			/*Push list by 1 char to make space at cursor pos*/
+			line_push(cur_line, mempos[1], 1, HLINES);
+			memcpy(cur_line->str + mempos[1], (char *)&k, 1);
 
-		/*Print out page and move cursor appropriately*/
-		next_page = scr_out(cur_page, VLINES);
-		if (scrpos[1] + 1 >= HLINES)
-			move(scrpos[0] + 1, 0);
-		else
-			move(scrpos[0], scrpos[1] + 1);
+			/*Print out page and move cursor appropriately*/
+			next_page = scr_out(cur_page, VLINES);
+			if (scrpos[1] + 1 >= HLINES)
+				move(scrpos[0] + 1, 0);
+			else
+				move(scrpos[0], scrpos[1] + 1);
 		}
 	}
-	}
+
+	} //Endswitch
 
 	free_str_array(lines, line_count);
 	endwin();
@@ -363,10 +388,12 @@ line_t *list_rewind(line_t *head, int how_many)
 	return head;
 }
 
-void goto_endline(line_t *line, int y, int max_len) 
+int goto_endline(line_t *line, int y, int max_len) 
 {
+	if (line == NULL) return -1;
 	int len = scr_len(line->str);
 	move(y, len >= max_len ? max_len - 1 : len);
+	return 0;
 }
 
 void print_control_line(char *str) 
@@ -377,7 +404,8 @@ void print_control_line(char *str)
 	wrefresh(menuw);
 }
 
-void reset_control_line() {
+void reset_control_line() 
+{
 	wattron(menuw, A_STANDOUT);
 	mvwprintw(menuw, 0, 1, "CTRL+S:Save");
 	wattroff(menuw, A_STANDOUT);
@@ -388,7 +416,8 @@ void reset_control_line() {
 	wrefresh(menuw);
 }
 
-void init_control_line() {
+void init_control_line() 
+{
 	menuw = newwin(1, HLINES, VLINES, 0);
 	box(menuw, 0, 0);
 	reset_control_line();
@@ -435,6 +464,8 @@ void update_mempos(int mempos[], int scrpos[], line_t *cur_line)
 int scr_len(char *str) 
 {
 	int ret = 0;
+	if (str == NULL) return 0;
+
 	for (int i = 0; str[i]; i++) {
 		if (str[i] == '\t')
 		ret = upperbound(ret + 1, 8);
@@ -445,11 +476,11 @@ int scr_len(char *str)
 	return ret;
 }
 
-int conv_to_scrpos(int memposx, line_t *line) 
+int conv_to_scrpos(int memposx, char *str) 
 {
 	int ret = 0;
 	for (int i = 0; i < memposx; i++) {
-		if (line->str[i] == '\t')
+		if (str[i] == '\t')
 		ret = upperbound(ret + 1, 8);
 		else
 		ret++;

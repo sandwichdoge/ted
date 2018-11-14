@@ -5,7 +5,7 @@ test: fileops.o linked-list.o str-utils.o test.o
 	gcc -g test.o fileops.o linked-list.o str-utils.o
 
 test.o: test.c
-	gcc -g -c test.c
+	gcc -g -Wall -c test.c
 
 ted.o: ted.c ted.h
 	gcc -c ted.c -lncurses
