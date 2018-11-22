@@ -6,10 +6,11 @@ Word-wrapped. Focused on viewing and editing of text documents instead of source
 - Compile
 ```
 make
+make install
 make clean
 ```
 
 - Run
 ```
-./ted sample.txt
+ted sample.txt
 ```

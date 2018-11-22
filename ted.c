@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 		}
 		break;
 	case KEY_RIGHT:
-		if (scrpos[1] == scr_len(cur_line->str) || scrpos[1] == HLINES - 1) { // Right key pressed at end of line
+		if (scrpos[1] >= scr_len(cur_line->str) || scrpos[1] == HLINES - 1) { // Right key pressed at end of line
 		move(scrpos[0] + 1, 0);
 		cur_lineno = INCREMENT(cur_lineno, new_sz);
 		} else if (cur_line->str[mempos[1]] == '\t') { // handle TABs
