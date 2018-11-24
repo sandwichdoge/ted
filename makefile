@@ -19,5 +19,8 @@ linked-list.o: linked-list.c linked-list.h
 str-utils.o: str-utils/str-utils.h str-utils/str-utils.c
 	gcc -c str-utils/str-utils.c
 
+install:
+	ln -s ./ted /usr/bin/ted
+
 clean:
 	rm *.o
