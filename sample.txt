@@ -3,15 +3,14 @@ world.
 
 
 There are three classes of functions which you can use to do output on screen.
-
-
     addch() class: Print single character with attributes
 
     printw() class: Print formatted output similar to printf()
 
     addstr() class: Print strings
 
-These functions can be used interchangeably and it's a matter of style as to which class is used. Let's see each one in detail. sdjaid2872j3e.
+These functions can be used interchangeably and it's a matter of style as to which class is used. Let's see each one in detail. 
+sdjaid2872j3e.
 
 Each of the eight episodic Star Wars films begin with nearly identical openings, in which the text "A long time ago in a galaxy far, far away...." is displayed, followed by the Star Wars logo over a field of stars. A subsequent downward tilt reveals the film's episode number, the subtitle in all-capital letters, and a three-paragraph summary of events immediately prior to the events of the film.
 Two typefaces were used in the crawl: In current releases of episodes I-III and VI, News Gothic bold is used for the main body of the crawl and Episode number, and Univers light ultra condensed for the titles of the films. In the current releases of Episodes IV-V and VII, News Gothic bold is used for the main body of the crawl and Episode number, but varied versions of the News Gothic font are also used for the titles of the films.

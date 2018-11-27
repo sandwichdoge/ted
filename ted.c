@@ -160,7 +160,8 @@ int main(int argc, char *argv[])
 		else { // TODO: Backspace is pressed at start of line
 			if (cur_line->prev->str[LF_FLAG] == 1) { //previous linebreak is real
 				cur_line->prev->str[LF_FLAG] = 0;
-				line_pop(cur_line->prev, strlen(cur_line->prev->str) - 1, 1, HLINES);
+				make_terminal_friendly(cur_line->prev, HLINES); //If str[FLAG]==0 and strlen(str)<max_len, fix the line
+				//line_pop(cur_line->prev, strlen(cur_line->prev->str) - 1, 1, HLINES);
 			}
 			scr_out(cur_page, VLINES);
 			goto_endline(cur_line->prev, scrpos[0] - 1, HLINES);
@@ -217,12 +218,13 @@ void line_pop(line_t *head, int pos, int n, const int max_len)
 	if (pos + n > strlen(head->str)) {   // Carried through next line
 		if (head->str[max_len + 1] != 1) { // If linebreak was generated/fake
 			line_pop(head->next, 0, pos + n - strlen(head->str), max_len); // Pop next line
-		} else return;
+		}
+		else return;
 		line_pop(head, pos, max_len - pos, max_len); // Pop chars after pos
-	} else {
+	} 
+	else {
 		char *first_word = calloc(n + 1, 1);
-		if (head->next != NULL && head->str[max_len + 1] != 1 &&
-			strlen(head->next->str)) {
+		if (head->next != NULL && head->str[max_len + 1] != 1 && strlen(head->next->str)) {
 			memcpy(first_word, head->next->str, n);
 			line_pop(head->next, 0, n, max_len);
 		}
@@ -232,8 +234,7 @@ void line_pop(line_t *head, int pos, int n, const int max_len)
 		strcat(head->str, first_word);
 		if (strlen(head->str) == 0) {
 			flg = head->str[max_len + 1]; // PRESERVE REAL LF
-			if (head->prev != NULL)
-			head->prev->str[max_len + 1] = flg;
+			if (head->prev != NULL) head->prev->str[max_len + 1] = flg;
 			list_remove(head);
 		}
 
@@ -277,7 +278,7 @@ void line_push(line_t *head, int pos, int n, const int max_len)
 	last_word = NULL;
 }
 
-// TODO: take TAB into consideration
+
 /*(maxlen+2)th byte [or 0-based index: maxlen+1] will represent if it's a real
  *LF (\n) or a generated line (broken down for viewing) 0: fake LF, 1: real LF
  *All lines are maxlen + 2 bytes long (NULLTERM then LFflag)
@@ -308,14 +309,14 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
 		cur_line = arr[i] + cur;
 		/*Give it a nice linebreak formatting (avoid breaking a word in half)*/
 		formatted_len = scr_len(cur_line);
-		if (formatted_len > max_len) { // if line is too long
+		if (formatted_len > max_len) { // if line is too long, rewind until SPACE is met
 		for (formatted_len = conv_to_mempos(max_len - 1, cur_line) ; formatted_len > 0; formatted_len--) {
 			if (cur_line[formatted_len] == ' ')
 			break;
 		}
 
-		if (formatted_len == 0)
-			formatted_len = conv_to_mempos(max_len - 1, cur_line); // If SPACE doesn't exist in line
+		if (formatted_len == 0) // If SPACE doesn't exist in line
+			formatted_len = conv_to_mempos(max_len - 1, cur_line);
 		else
 			formatted_len++; // Print space at end of line
 		}
@@ -338,6 +339,34 @@ int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_s
 
 	return 0;
 }
+
+
+inline int first_word_len(char *str)
+{
+	return strchr(str, ' ') ? strchr(str, ' ') - str : strlen(str);
+}
+
+
+/*Make line terminal friendly*/
+void make_terminal_friendly(line_t *line, const int max_len)
+{
+	char CF = 0;
+	if (strlen(line->str) + first_word_len(line->next->str) < max_len && line->str[max_len + 1]  == 0) {
+		int empty_sz = max_len - strlen(line->str);
+		//append head of next line to current line
+		memcpy(line->str + strlen(line->str), line->next->str, empty_sz);
+		str_remove(line->next->str, 0, empty_sz);
+		if (line->next->str[0] == '\0') {
+			CF = line->next->str[max_len + 1];
+			list_remove(line->next);
+			line->str[max_len + 1] = CF;
+		}
+		else {
+			make_terminal_friendly(line->next, max_len);
+		}
+	}
+}
+
 
 /*Clear the screen*/
 void scr_clear(WINDOW *win) 
