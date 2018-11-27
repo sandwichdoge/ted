@@ -93,7 +93,12 @@ void str_insert(char *str, int pos, char *substr)
 /*Remove some characters in the middle of a string*/
 int str_remove(char *str, int pos, int len)
 {
-	if (len + pos > strlen(str)) return -1;
+	if (pos > strlen(str)) return -1;
+	if (len + pos > strlen(str)) {
+		len = strlen(str) - pos;
+	}
+	
+	memset(str + pos, 0, len);
 	char *tail = strdup(str + pos + len);
 	strcpy(str + pos, tail);
 

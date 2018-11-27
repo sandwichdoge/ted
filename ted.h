@@ -17,6 +17,8 @@ WINDOW *menuw;
 
 char** generate_terminal_friendly_array(char **arr, int sz, int *new_size, int max_len);
 int generate_terminal_friendly_list(char **arr, int sz, line_t *head, int *new_size, int max_len);
+void make_terminal_friendly(line_t *line, const int max_len);
+int first_word_len(char *str);
 int list_write_to_file(line_t *head, char *path, int flg_pos);
 void scr_clear();
 line_t* scr_out(line_t *head, int how_many);
