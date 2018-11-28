@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 				move(scrpos[0], scrpos[1] - 1);
 		}
 		else if (scrpos[0 > 0]) { // TODO: Backspace is pressed at start of line
-			int prevlen = strlen(cur_line->prev->str);
+			int prevlen = conv_to_scrpos(strlen(cur_line->prev->str), cur_line->prev->str);
 			if (cur_line->prev->str[LF_FLAG] == 1) { //previous linebreak is real
 				cur_line->prev->str[LF_FLAG] = 0;
 				make_terminal_friendly(cur_line->prev, HLINES); //If str[FLAG]==0 and strlen(str)<max_len, fix the line
@@ -377,6 +377,7 @@ void scr_clear(WINDOW *win)
 	wrefresh(win);
 }
 
+
 /*Print a specific number of lines to the screen, starting from head*/
 line_t *scr_out(line_t *head, int how_many) 
 {
@@ -393,6 +394,7 @@ line_t *scr_out(line_t *head, int how_many)
 	return head;
 }
 
+
 /*print a line at line number L
  *line is the data in buffer
  *L is terminal line no.*/
@@ -404,11 +406,13 @@ int print_line(char *data, int L)
 	return 0;
 }
 
+
 void update_pos(int scrpos[]) 
 {
 	scrpos[0] = getcury(stdscr);
 	scrpos[1] = getcurx(stdscr);
 }
+
 
 line_t *list_rewind(line_t *head, int how_many) 
 {
@@ -419,6 +423,7 @@ line_t *list_rewind(line_t *head, int how_many)
 	return head;
 }
 
+
 int goto_endline(line_t *line, int y, int max_len) 
 {
 	if (line == NULL) return -1;
@@ -427,6 +432,7 @@ int goto_endline(line_t *line, int y, int max_len)
 	return 0;
 }
 
+
 void print_control_line(char *str) 
 {
 	wmove(menuw, 0, 1);
@@ -434,6 +440,7 @@ void print_control_line(char *str)
 	mvwprintw(menuw, 0, 1, str);
 	wrefresh(menuw);
 }
+
 
 void reset_control_line() 
 {
@@ -447,12 +454,14 @@ void reset_control_line()
 	wrefresh(menuw);
 }
 
+
 void init_control_line() 
 {
 	menuw = newwin(1, HLINES, VLINES, 0);
 	box(menuw, 0, 0);
 	reset_control_line();
 }
+
 
 /*Ceiling n to the nearest upper multiplication of div*/
 int upperbound(int n, int divi) 
@@ -463,24 +472,26 @@ int upperbound(int n, int divi)
 	return divi * (res + 1);
 }
 
-int conv_to_mempos(int x, char *str) 
+
+/*It's at position scr_x on the screen, where is it in memory?*/
+int conv_to_mempos(int scr_x, char *str) 
 {
 	int ret = 0;
 	int scr = 0;
 	for (int i = 0; str[i]; i++) { // this part could look prettier but this
-									// expression is more logically sound
-	if (str[i] == '\t') {
-		scr = upperbound(scr + 1, 8);
-	} else {
-		scr++;
-	}
-	if (scr > x)
-		break;
-	ret++;
+						// expression is more logically sound
+		if (str[i] == '\t') 
+			scr = upperbound(scr + 1, 8);
+		else
+			scr++;
+
+		if (scr > scr_x) break;
+		ret++;
 	}
 
 	return ret;
 }
+
 
 /*Convert scrpos to mempos. Handle special characters that take up more than 1
  * space*/
@@ -507,24 +518,28 @@ int scr_len(char *str)
 	return ret;
 }
 
-int conv_to_scrpos(int memposx, char *str) 
+
+/*Convert strlen to len shown on screen*/
+int conv_to_scrpos(int max, char *str) 
 {
 	int ret = 0;
-	for (int i = 0; i < memposx; i++) {
+	for (int i = 0; i < max; i++) {
 		if (str[i] == '\t')
-		ret = upperbound(ret + 1, 8);
+			ret = upperbound(ret + 1, 8);
 		else
-		ret++;
+			ret++;
 	}
 
 	return ret;
 }
+
 
 /*Return 1 if c is alphabet*/
 int is_alpha(int c) 
 {
   	return (c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z');
 }
+
 
 int is_acceptable_ascii_symbols(int c) 
 {
