@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
 				move(mempos[0], conv_to_scrpos(mempos[1] - 1, cur_line->str));
 			else
 				move(scrpos[0], scrpos[1] - 1);
-		} 
+		}
 		else { // TODO: Backspace is pressed at start of line
 			if (cur_line->prev->str[LF_FLAG] == 1) { //previous linebreak is real
 				cur_line->prev->str[LF_FLAG] = 0;
@@ -232,7 +232,7 @@ void line_pop(line_t *head, int pos, int n, const int max_len)
 		str_remove(head->str, pos, n);
 
 		strcat(head->str, first_word);
-		if (strlen(head->str) == 0) {
+		if (strlen(head->str) == 0 && head->str[max_len + 1] == 0) {
 			flg = head->str[max_len + 1]; // PRESERVE REAL LF
 			if (head->prev != NULL) head->prev->str[max_len + 1] = flg;
 			list_remove(head);
@@ -529,7 +529,7 @@ int is_acceptable_ascii_symbols(int c)
 	static int ascii_symbols[] = {' ', '_', '-', '?',  '.', ',', ';', ':',
 							'+', '*', '/', '\\', '&', '%', '$', '#',
 							'@', '!', '=', '[',  ']', '{', '}', '<',
-							'>', '`', '~', '|',  '"', '\''};
+							'>', '`', '~', '|',  '"', '\'', '(', ')'};
 	for (int i = 0; i < sizeof(ascii_symbols); i++) {
 		if (c == ascii_symbols[i])
 		return 1;
