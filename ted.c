@@ -157,14 +157,16 @@ int main(int argc, char *argv[])
 			else
 				move(scrpos[0], scrpos[1] - 1);
 		}
-		else { // TODO: Backspace is pressed at start of line
+		else if (scrpos[0 > 0]) { // TODO: Backspace is pressed at start of line
+			int prevlen = strlen(cur_line->prev->str);
 			if (cur_line->prev->str[LF_FLAG] == 1) { //previous linebreak is real
 				cur_line->prev->str[LF_FLAG] = 0;
 				make_terminal_friendly(cur_line->prev, HLINES); //If str[FLAG]==0 and strlen(str)<max_len, fix the line
 				//line_pop(cur_line->prev, strlen(cur_line->prev->str) - 1, 1, HLINES);
 			}
 			scr_out(cur_page, VLINES);
-			goto_endline(cur_line->prev, scrpos[0] - 1, HLINES);
+			move(scrpos[0] - 1, prevlen);
+
 		}
 		break;
 
