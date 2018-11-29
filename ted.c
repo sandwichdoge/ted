@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
 			else
 				move(scrpos[0], scrpos[1] - 1);
 		}
-		else if (scrpos[0 > 0]) { // TODO: Backspace is pressed at start of line
+		else if (scrpos[0 > 0]) { //BACKSPACE is pressed and start of line
 			int prevlen = conv_to_scrpos(strlen(cur_line->prev->str), cur_line->prev->str);
 			if (cur_line->prev->str[LF_FLAG] == 1) { //previous linebreak is real
 				cur_line->prev->str[LF_FLAG] = 0;
@@ -176,7 +176,6 @@ int main(int argc, char *argv[])
 		break;
 	}
 
-	// TODO: handle TAB insertion
 	/*INPUT KEYS (a-z, A-Z, 0-9, etc. and non-special symbols)*/
 	/*Insert a char at cursor position, scrpos[0] is the line no and scrpos[1]
 		* is the char no.*/
@@ -188,7 +187,8 @@ int main(int argc, char *argv[])
 												// reached limit, insert typed key
 			char_insert(cur_line->str, mempos[1], k);
 			print_line(cur_line->str, scrpos[0]); // Display modified line on screen
-			move(scrpos[0], scrpos[1] + 1 > HLINES ? HLINES : scrpos[1] + 1);
+			int len = conv_to_scrpos(mempos[1] + 1, cur_line->str);
+			move(scrpos[0], len > HLINES ? HLINES : len);
 		} 
 		else { // If line has reached len limit
 			/*Push list by 1 char to make space at cursor pos*/
@@ -244,7 +244,7 @@ void line_pop(line_t *head, int pos, int n, const int max_len)
 	}
 }
 
-// TODO: take TAB into consideration
+
 /*Make space at pos to insert string later*/
 void line_push(line_t *head, int pos, int n, const int max_len) 
 {
@@ -524,8 +524,9 @@ int conv_to_scrpos(int max, char *str)
 {
 	int ret = 0;
 	for (int i = 0; i < max; i++) {
-		if (str[i] == '\t')
+		if (str[i] == '\t') {
 			ret = upperbound(ret + 1, 8);
+		}
 		else
 			ret++;
 	}
@@ -546,7 +547,7 @@ int is_acceptable_ascii_symbols(int c)
 	static int ascii_symbols[] = {' ', '_', '-', '?',  '.', ',', ';', ':',
 							'+', '*', '/', '\\', '&', '%', '$', '#',
 							'@', '!', '=', '[',  ']', '{', '}', '<',
-							'>', '`', '~', '|',  '"', '\'', '(', ')'};
+							'>', '`', '~', '|',  '"', '\'', '(', ')', '\t'};
 	for (int i = 0; i < sizeof(ascii_symbols); i++) {
 		if (c == ascii_symbols[i])
 		return 1;
